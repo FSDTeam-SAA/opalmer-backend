@@ -4,17 +4,31 @@ import { IUser, UserModel } from '../interface/user.interface'
 
 const userSchema: Schema = new Schema<IUser>(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, select: 0, required: true },
     username: { type: String, required: true, unique: true },
-    phone: { type: String },
-    credit: { type: Number, default: null },
+    phoneNumber: { type: String }, 
     role: {
       type: String,
+      enum: ['user', 'admin', 'administrator'], 
       default: 'user',
-      enum: ['user', 'admin', 'driver'],
     },
+    type: {
+      type: [String],
+      enum: ['parent', 'student', 'teacher'],
+      default: [],
+    },
+    Id: { type: Number }, 
+    password: { type: String, required: true, select: false }, 
+    gradeLevel: {
+      type: String,
+      enum: ['grade1', 'grade2', 'grade3', 'grade4', 'grade5', 'grade6'], 
+      default: null,
+    },
+    state: {
+      type: String,
+      enum: ['active', 'inactive', 'suspended'], 
+      default: 'active',
+    },
+    age: { type: Number, default: null },
     avatar: {
       public_id: { type: String, default: '' },
       url: { type: String, default: '' },
@@ -24,43 +38,33 @@ const userSchema: Schema = new Schema<IUser>(
       token: { type: String, default: '' },
     },
     password_reset_token: { type: String, default: '' },
-    fine: { type: Number, default: 0 },
     refreshToken: { type: String, default: '' },
+    credit: { type: Number, default: null },
+    fine: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
 
-// Pre save middleware / hook : will work on create() save()
+// Hash password before saving
 userSchema.pre('save', async function (next) {
   const user = this as any
 
-  // Hash password
   if (user.isModified('password')) {
-    const saltRounds = Number(process.env.bcrypt_salt_round) || 10
-    let pass = user.password
-    user.password = await bcrypt.hash(pass, saltRounds)
+    const saltRounds = Number(process.env.BCRYPT_SALT_ROUND) || 10
+    user.password = await bcrypt.hash(user.password, saltRounds)
   }
 
   next()
 })
 
-// //post middleware /hook
-// userSchema.post('save', function (doc, next) {
-//     doc.password = '';
-//     if (doc.verificationInfo) {
-//         doc.verificationInfo.OTP = '';
-//     }
-//     doc.secureFolderPin = '';
-//     next();
-// });
-
+// Static methods
 userSchema.statics.isUserExistsByEmail = async function (email: string) {
-  return await User.findOne({ email }).select('+password +secureFolderPin')
+  return await User.findOne({ email }).select('+password')
 }
 
 userSchema.statics.isOTPVerified = async function (id: string) {
   const user = await User.findById(id).select('+verificationInfo')
-  return user?.verificationInfo.verified
+  return user?.verificationInfo?.verified
 }
 
 userSchema.statics.isPasswordMatched = async function (

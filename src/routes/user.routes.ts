@@ -1,8 +1,10 @@
 import express from 'express'
-import { getUsers } from '../controllers/user.controller'
-
+import { registerUser } from '../controllers/user.controller'
+import { upload } from '../middlewares/multer.middleware'
 const router = express.Router()
 
-router.get('/', getUsers)
+
+
+router.post('/register', upload.single('image'), registerUser)
 
 export default router
