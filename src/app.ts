@@ -1,15 +1,12 @@
 import express from 'express'
-import userRoutes from './routes/user.routes'
 import { globalErrorHandler } from './middlewares/globalErrorHandler'
 import { notFound } from './middlewares/notFound'
+import router from './routes'
 const app = express()
 
 app.use(express.json())
 
-/**********************
- * USER AND AUTH APIS *
- **********************/
-app.use('/api/users', userRoutes)
+app.use('/api/v1', router)
 
 app.use(notFound as never)
 app.use(globalErrorHandler)
