@@ -6,6 +6,9 @@ const app = express()
 
 app.use(express.json())
 
+/**********************
+ * USER AND AUTH APIS *
+ **********************/
 app.use('/api/users', userRoutes)
 
 app.use(notFound as never)

@@ -1,36 +1,70 @@
-import { NextFunction, Request, Response } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
-import httpStatus from "http-status";
-import AppError from "../errors/AppError";
-import { User } from "../models/user.model";
+import { NextFunction, Request, Response } from 'express'
+import jwt, { JwtPayload } from 'jsonwebtoken'
+import httpStatus from 'http-status'
+import AppError from '../errors/AppError'
+import { User } from '../models/user.model'
 
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) throw new AppError(httpStatus.NOT_FOUND, "Token not found");
+// ✅ Protect route (JWT authentication)
+export const protect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const token = req.headers.authorization?.split(' ')[1]
+  if (!token) throw new AppError(httpStatus.UNAUTHORIZED, 'Token not found')
 
   try {
-    const decoded = await jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as JwtPayload;
-    // console.log(decoded)
-    const user = await User.findById(decoded._id)
-    if (user && await User.isOTPVerified(user._id)) {
-      req.user = user;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_ACCESS_SECRET!
+    ) as JwtPayload
+
+    // Fetch user by ID from token
+    const user = await User.findById(decoded.userId) // userId set in login token
+    if (!user) {
+      throw new AppError(httpStatus.UNAUTHORIZED, 'User not found')
     }
-    next();
+
+    // Attach user to request
+    req.user = user
+    next()
   } catch (err) {
-    throw new AppError(401, "Invalid token");
+    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid or expired token')
   }
-};
+}
 
-export const isAdmin = (req: Request, res: Response, next: NextFunction): void => {
-  if (req.user?.role !== "admin") {
-    throw new AppError(403, "Access denied. You are not an admin.");
+// ✅ Role-based authorization middleware
+export const authorizeRoles = (...roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated')
+    }
+    if (!roles.includes(req.user.role)) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'Access denied. Insufficient role permissions.'
+      )
+    }
+    next()
   }
-  next();
-};
+}
 
-export const isDriver = (req: Request, res: Response, next: NextFunction): void => {
-  if (req.user?.role !== "driver") {
-    throw new AppError(403, "Access denied. You are not an driver.");
+// ✅ Type-based authorization middleware
+export const authorizeTypes = (...types: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated')
+    }
+
+    const userTypes = req.user.type || []
+    const hasType = userTypes.some((t: string) => types.includes(t))
+
+    if (!hasType) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'Access denied. Insufficient type permissions.'
+      )
+    }
+    next()
   }
-  next();
-};
+}
