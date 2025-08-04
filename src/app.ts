@@ -1,14 +1,16 @@
-import express from 'express'
-import userRoutes from './routes/user.routes'
-import { globalErrorHandler } from './middlewares/globalErrorHandler'
-import { notFound } from './middlewares/notFound'
-const app = express()
+import express from "express";
+// import userRoutes from './routes/user.routes'
+import { globalErrorHandler } from "./middlewares/globalErrorHandler";
+import { notFound } from "./middlewares/notFound";
+import router from "./routes";
+const app = express();
 
-app.use(express.json())
+app.use(express.json());
 
-app.use('/api/users', userRoutes)
+// app.use('/api/users', userRoutes)
+app.use("/api/v1", router);
 
-app.use(notFound as never)
-app.use(globalErrorHandler)
+app.use(notFound as never);
+app.use(globalErrorHandler);
 
-export default app
+export default app;
