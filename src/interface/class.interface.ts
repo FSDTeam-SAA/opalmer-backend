@@ -1,11 +1,11 @@
-import { Document, Model } from 'mongoose'
+import { Document, Model, Types } from 'mongoose'
 
 export interface IClass extends Document {
   grade: string
   subject: string
   section: string
   schedule: string
-  teacherName: string
+  teacherId: Types.ObjectId
   created_at?: Date
   updated_at?: Date
 }
