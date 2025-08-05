@@ -6,7 +6,7 @@ const messageSchema: Schema<IMessage> = new Schema(
     roomId: { type: Schema.Types.ObjectId, ref: 'Room', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     message: { type: String, default: '' },
-    file: { type: [String], default: [] }, // Array of file URLs
+    file: { type: [String], default: [] }, 
     ans: { type: String, default: '' },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
