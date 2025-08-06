@@ -8,4 +8,8 @@ router.post(
   featuresAndQuestionsController.crateFeaturesAndQuestions
 );
 
+router.get("/AppFeatures", featuresAndQuestionsController.getAppFeatures);
+
+router.get("/FAQquestions", featuresAndQuestionsController.getFAQquestions);
+
 export const featuresAndQuestionsRouter = router;

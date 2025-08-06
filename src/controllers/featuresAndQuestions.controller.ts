@@ -28,14 +28,29 @@ const crateFeaturesAndQuestions = catchAsync(async (req, res) => {
   }
 });
 
-const getFeaturesAndQuestions = catchAsync(async (req, res) => {
+const getAppFeatures = catchAsync(async (req, res) => {
   try {
-    const result = await FeaturesAndQuestions.find();
+    const result = await FeaturesAndQuestions.find({ docType: "AppFeatures" });
 
-    sendResponse(res, {
+    return sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "Features And Questions fetched successfully",
+      message: "App Features fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const getFAQquestions = catchAsync(async (req, res) => {
+  try {
+    const result = await FeaturesAndQuestions.find({ docType: "FAQquestions" });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "FAQ questions fetched successfully",
       data: result,
     });
   } catch (error) {
@@ -45,5 +60,6 @@ const getFeaturesAndQuestions = catchAsync(async (req, res) => {
 
 export const featuresAndQuestionsController = {
   crateFeaturesAndQuestions,
-  getFeaturesAndQuestions,
+  getAppFeatures,
+  getFAQquestions,
 };
