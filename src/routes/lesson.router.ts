@@ -20,5 +20,12 @@ router.get(
   lessonController.getLessonsByTeacher
 );
 
+router.get(
+  "/student-lessons",
+  protect,
+  authorizeTypes("student"),
+  lessonController.getLessonsByStudent
+);
+
 const lessonRouter = router;
 export default lessonRouter;

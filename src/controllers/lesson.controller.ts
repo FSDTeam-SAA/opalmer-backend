@@ -61,7 +61,37 @@ const getLessonsByTeacher = catchAsync(async (req, res) => {
       throw new AppError(400, "Teacher not found");
     }
 
-    const result = await Lesson.find({ teacherId });
+    const result = await Lesson.find({ teacherId })
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Lessons fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const getLessonsByStudent = catchAsync(async (req, res) => {
+  try {
+    const { _id: studentId } = req.user as any;
+
+    const student = await User.findById(studentId);
+    if (!student) {
+      throw new AppError(400, "Student not found");
+    }
+
+    const result = await Lesson.find({ studentId });
 
     return sendResponse(res, {
       statusCode: 200,
@@ -77,6 +107,7 @@ const getLessonsByTeacher = catchAsync(async (req, res) => {
 const lessonController = {
   createLesson,
   getLessonsByTeacher,
+  getLessonsByStudent,
 };
 
 export default lessonController;
