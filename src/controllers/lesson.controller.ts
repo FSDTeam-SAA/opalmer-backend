@@ -52,8 +52,31 @@ const createLesson = catchAsync(async (req, res) => {
   }
 });
 
+const getLessonsByTeacher = catchAsync(async (req, res) => {
+  try {
+    const { _id: teacherId } = req.user as any;
+
+    const teacher = await User.findById(teacherId);
+    if (!teacher) {
+      throw new AppError(400, "Teacher not found");
+    }
+
+    const result = await Lesson.find({ teacherId });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Lessons fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const lessonController = {
   createLesson,
+  getLessonsByTeacher,
 };
 
 export default lessonController;
