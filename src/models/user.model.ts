@@ -39,7 +39,7 @@ const userSchema: Schema = new Schema<IUser>(
     password_reset_token: { type: String, default: '' },
     refreshToken: { type: String, default: '' },
     credit: { type: Number, default: null },
-    fine: { type: Number, default: 0 },
+    fine: { type: Number},
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
