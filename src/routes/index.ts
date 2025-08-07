@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { featuresAndQuestionsRouter } from './featuresAndQuestions.router'
 import userRoutes from '../routes/user.routes'
+import stuAssignToClassRoutes from '../routes/stuAssignToClass.routes'
 const router = Router()
 
 const moduleRoutes = [
@@ -12,6 +13,10 @@ const moduleRoutes = [
     path: '/users',
     route: userRoutes,
   },
+  { 
+    path: '/student-assign-to-class',
+    route: stuAssignToClassRoutes
+  }
 ]
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))
