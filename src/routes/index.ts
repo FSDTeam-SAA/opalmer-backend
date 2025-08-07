@@ -29,7 +29,6 @@ const moduleRoutes = [
     path: '/classes',
     route: classRoutes,
   },
-]
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
