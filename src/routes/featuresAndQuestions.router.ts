@@ -8,4 +8,12 @@ router.post(
   featuresAndQuestionsController.crateFeaturesAndQuestions
 );
 
+router.get("/AppFeatures", featuresAndQuestionsController.getAppFeatures);
+router.get("/FAQquestions", featuresAndQuestionsController.getFAQquestions);
+
+router.put(
+  "/update/:id",
+  featuresAndQuestionsController.updateFeaturesAndQuestions
+);
+
 export const featuresAndQuestionsRouter = router;
