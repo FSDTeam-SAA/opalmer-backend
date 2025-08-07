@@ -1,20 +1,24 @@
-import mongoose, { Schema } from 'mongoose'
-import { ILesson, LessonModel } from '../interface/lesson.interface'
+import mongoose, { Schema } from "mongoose";
+import { ILesson, LessonModel } from "../interface/lesson.interface";
 
 const lessonSchema: Schema<ILesson> = new Schema(
   {
-    classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
-    topic: { type: Number, required: true },
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    task: { type: String, default: '' },
-    document: { type: Number, default: 0 },
-    archived: { type: Boolean, default: false },
+    studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    teacherId: { type: Schema.Types.ObjectId, ref: "User" },
+    objective: { type: String, required: true },
+    note: { type: String, required: true },
+    document: {
+      public_id: { type: String, default: "" },
+      url: { type: String, default: "" },
+    },
   },
-  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
-)
+  {
+    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    versionKey: false,
+  }
+);
 
 export const Lesson = mongoose.model<ILesson, LessonModel>(
-  'Lesson',
+  "Lesson",
   lessonSchema
-)
+);
