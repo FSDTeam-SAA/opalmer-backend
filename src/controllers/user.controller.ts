@@ -9,10 +9,11 @@ import jwt  from 'jsonwebtoken';
  * REGISTER USER *
  *****************/
 export const registerUser = catchAsync(async (req: Request, res: Response) => {
-  const { username, Id, age, state, password } = req.body
+  const { username, phoneNumber, type, gradeLevel, Id, age, password, email } =
+    req.body
 
   // Validate required fields
-  if (!username || !Id || !age || !state || !password) {
+  if (!username || !Id || !age  || !password) {
     throw new AppError(
       400,
       'All fields (username, Id, age, state, password) are required.'
@@ -42,9 +43,12 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     username,
     Id,
     age,
-    state,
     password,
     avatar,
+    phoneNumber,
+    type,
+    gradeLevel,
+    email,
   })
 
   res.status(201).json({

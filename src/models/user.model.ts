@@ -6,6 +6,7 @@ const userSchema: Schema = new Schema<IUser>(
   {
     username: { type: String, required: true, unique: true },
     phoneNumber: { type: String }, 
+    email: { type: String },
     role: {
       type: String,
       enum: ['user', 'admin', 'administrator'], 
@@ -19,9 +20,7 @@ const userSchema: Schema = new Schema<IUser>(
     Id: { type: Number }, 
     password: { type: String, required: true, select: false }, 
     gradeLevel: {
-      type: String,
-      enum: ['grade1', 'grade2', 'grade3', 'grade4', 'grade5', 'grade6'], 
-      default: null,
+      type: Number,
     },
     state: {
       type: String,

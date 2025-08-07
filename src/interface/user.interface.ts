@@ -3,11 +3,12 @@ import { Document, Model } from 'mongoose'
 export interface IUser extends Document {
   username: string
   phoneNumber?: string
+  email?: string
   role: 'user' | 'admin' | 'administrator'
   type: ('parent' | 'student' | 'teacher')[]
   Id?: number 
   password: string
-  gradeLevel?: 'grade1' | 'grade2' | 'grade3' | 'grade4' | 'grade5' | 'grade6'
+  gradeLevel?: number
   state: 'active' | 'inactive' | 'suspended'
   age?: number
   avatar?: {
