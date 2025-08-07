@@ -6,10 +6,11 @@ import {
   updateClass,
   deleteClass,
 } from '../controllers/class.controller'
+import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 
 const router = express.Router()
 
-router.post('/', createClass)
+router.post('/', protect, authorizeTypes('teacher'), createClass)
 router.get('/', getAllClasses)
 // Get All Classes
 router.get('/teacher/:teacherId', getClassesByTeacher)

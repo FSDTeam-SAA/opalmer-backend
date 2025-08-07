@@ -7,7 +7,10 @@ const lessonSchema: Schema<ILesson> = new Schema(
     teacherId: { type: Schema.Types.ObjectId, ref: "User" },
     objective: { type: String, required: true },
     note: { type: String, required: true },
-    document: { type: String, required: true },
+    document: {
+      public_id: { type: String, default: "" },
+      url: { type: String, default: "" },
+    },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

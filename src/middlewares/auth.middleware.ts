@@ -16,7 +16,7 @@ export const protect = async (
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_ACCESS_SECRET!
+      process.env.JWT_SECRET || 'default_secret'!
     ) as JwtPayload
 
     // Fetch user by ID from token
@@ -29,7 +29,7 @@ export const protect = async (
     req.user = user
     next()
   } catch (err) {
-    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid or expired token')
+    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid or expired token ' + err)
   }
 }
 
