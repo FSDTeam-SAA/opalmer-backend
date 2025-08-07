@@ -57,6 +57,31 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
   })
 })
 
+/******************************
+ * GET STUDENTS BY CLASS ID *
+ ******************************/
+export const getStudentByClass = catchAsync(async (req, res) => {
+  const { classId } = req.params
+
+  const assignments = await StuAssignToClass.find({ classId })
+    .populate('classId', 'grade subject section schedule')
+    .populate(
+      'studentId',
+      '-password_reset_token -refreshToken -verificationInfo'
+    )
+
+  if (!assignments) {
+    throw new AppError(httpStatus.NOT_FOUND, 'No students found for this class')
+  }
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Students for class fetched successfully',
+    data: assignments,
+  })
+})
+
 /***************************
  * REMOVE STUDENT ASSIGNMENT *
  ***************************/
