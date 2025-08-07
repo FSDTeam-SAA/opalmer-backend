@@ -6,5 +6,4 @@ const router = express.Router()
 router.post('/register', upload.single('image'), registerUser)
 router.post('/login', loginUser)
 
-
 export default router
