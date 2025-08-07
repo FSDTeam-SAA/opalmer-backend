@@ -5,7 +5,7 @@ export interface IUser extends Document {
   phoneNumber?: string
   email?: string
   role: 'user' | 'admin' | 'administrator'
-  type: ('parent' | 'student' | 'teacher')[]
+  type: 'parent' | 'student' | 'teacher'
   Id?: number 
   password: string
   gradeLevel?: number
