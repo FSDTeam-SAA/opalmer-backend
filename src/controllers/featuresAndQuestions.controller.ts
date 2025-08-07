@@ -28,14 +28,14 @@ const crateFeaturesAndQuestions = catchAsync(async (req, res) => {
   }
 });
 
-const getFeaturesAndQuestions = catchAsync(async (req, res) => {
+const getAppFeatures = catchAsync(async (req, res) => {
   try {
-    const result = await FeaturesAndQuestions.find();
+    const result = await FeaturesAndQuestions.find({ docType: "AppFeatures" });
 
-    sendResponse(res, {
+    return sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "Features And Questions fetched successfully",
+      message: "App Features fetched successfully",
       data: result,
     });
   } catch (error) {
@@ -43,7 +43,61 @@ const getFeaturesAndQuestions = catchAsync(async (req, res) => {
   }
 });
 
+const getFAQquestions = catchAsync(async (req, res) => {
+  try {
+    const result = await FeaturesAndQuestions.find({ docType: "FAQquestions" });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "FAQ questions fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const updateFeaturesAndQuestions = catchAsync(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const doc = await FeaturesAndQuestions.findById(id);
+    if (!doc) {
+      throw new AppError(404, "App Features not found");
+    }
+
+    const result = await FeaturesAndQuestions.findOneAndUpdate(
+      { _id: id },
+      req.body,
+      { new: true }
+    );
+
+    const { docType }: any = result;
+
+    if (docType === "AppFeatures") {
+      return sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "App Features created successfully",
+        data: result,
+      });
+    } else if (docType === "FAQquestions") {
+      return sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "FAQ questions created successfully",
+        data: result,
+      });
+    }
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 export const featuresAndQuestionsController = {
   crateFeaturesAndQuestions,
-  getFeaturesAndQuestions,
+  getAppFeatures,
+  getFAQquestions,
+  updateFeaturesAndQuestions,
 };

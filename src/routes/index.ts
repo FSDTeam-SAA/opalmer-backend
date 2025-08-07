@@ -1,17 +1,24 @@
 import { Router } from 'express'
-import { featuresAndQuestionsRouter } from './featuresAndQuestions.router'
 import userRoutes from '../routes/user.routes'
 import stuAssignToClassRoutes from '../routes/stuAssignToClass.routes'
 import classRoutes from '../routes/class.routes'
+import { aboutAndTermRouter } from "./aboutAndTerm.router";
+import { featuresAndQuestionsRouter } from './featuresAndQuestions.router'
+
 const router = Router()
+
 
 const moduleRoutes = [
   {
-    path: '/featuresAndQuestions',
+    path: "/featuresAndQuestions",
     route: featuresAndQuestionsRouter,
   },
   {
-    path: '/users',
+    path: "/aboutAndTerm",
+    route: aboutAndTermRouter,
+  },
+  {
+    path: "/users",
     route: userRoutes,
   },
   {
@@ -23,7 +30,8 @@ const moduleRoutes = [
     route: classRoutes,
   },
 ]
+];
 
-moduleRoutes.forEach((route) => router.use(route.path, route.route))
+moduleRoutes.forEach((route) => router.use(route.path, route.route));
 
-export default router
+export default router;
