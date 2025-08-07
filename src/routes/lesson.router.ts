@@ -13,5 +13,12 @@ router.post(
   lessonController.createLesson
 );
 
+router.get(
+  "/teacher-lessons",
+  protect,
+  authorizeTypes("teacher"),
+  lessonController.getLessonsByTeacher
+);
+
 const lessonRouter = router;
 export default lessonRouter;
