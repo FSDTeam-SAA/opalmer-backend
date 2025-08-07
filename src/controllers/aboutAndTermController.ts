@@ -29,8 +29,40 @@ const createAboutAndTerm = catchAsync(async (req, res) => {
   }
 });
 
+const getAbout = catchAsync(async (req, res) => {
+  try {
+    const result = await AboutAndTerm.find({ docType: "about" });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "About us fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const getTerms = catchAsync(async (req, res) => {
+  try {
+    const result = await AboutAndTerm.find({ docType: "terms" });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Terms and conditions fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const aboutAndTermController = {
   createAboutAndTerm,
+  getAbout,
+  getTerms,
 };
 
 export default aboutAndTermController;
