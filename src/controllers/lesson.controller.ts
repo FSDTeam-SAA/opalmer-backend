@@ -209,6 +209,31 @@ const updateLesson = catchAsync(async (req, res) => {
   }
 });
 
+const deleteLesson = catchAsync(async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      throw new AppError(400, "Lesson not found");
+    }
+
+    const deletedLesson = await Lesson.findByIdAndDelete(lessonId);
+    if (!deletedLesson) {
+      throw new AppError(404, "Lesson not found");
+    }
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Lesson deleted successfully",
+      data: null,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const lessonController = {
   createLesson,
   getLessonsByTeacher,
@@ -216,6 +241,7 @@ const lessonController = {
   getAllLessons,
   getSingleLesson,
   updateLesson,
+  deleteLesson,
 };
 
 export default lessonController;
