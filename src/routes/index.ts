@@ -5,6 +5,7 @@ import classRoutes from "../routes/class.routes";
 import { aboutAndTermRouter } from "./aboutAndTerm.router";
 import { featuresAndQuestionsRouter } from "./featuresAndQuestions.router";
 import lessonRouter from "./lesson.router";
+import behaviorRouter from "./behavior.router";
 
 const router = Router();
 
@@ -32,6 +33,10 @@ const moduleRoutes = [
   {
     path: "/lessons",
     route: lessonRouter,
+  },
+  {
+    path: "/behavior",
+    route: behaviorRouter,
   },
 ];
 
