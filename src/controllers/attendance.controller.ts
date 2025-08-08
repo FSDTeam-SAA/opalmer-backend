@@ -1,4 +1,3 @@
-import { Request, Response } from 'express'
 import AppError from '../errors/AppError'
 import catchAsync from '../utils/catchAsync'
 import { Attendance } from '../models/attendance.model'
