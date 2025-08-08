@@ -10,6 +10,4 @@ export interface ISchool {
   email?: string;
   establishedYear?: number;
   logo?: string;
-  created_at?: Date;
-  updated_at?: Date;
 }
