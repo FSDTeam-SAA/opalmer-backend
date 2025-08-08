@@ -3,6 +3,7 @@ import catchAsync from '../utils/catchAsync'
 import AppError from '../errors/AppError'
 import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
+import { User } from '../models/user.model'
 
 /******************
  * CREATE CLASS *
@@ -88,6 +89,35 @@ export const updateClass = catchAsync(async (req, res) => {
     success: true,
     message: 'Class updated successfully',
     data: updatedClass,
+  })
+})
+
+/**************************
+ * GET GRADE WISE CLASSES *
+ **************************/
+export const getgradeWiseClasses = catchAsync(async (req, res) => {
+  const studentId = req.user?._id
+
+  const student = await User.findById(studentId).select('grade')
+  console.log(1, student)
+
+  if (!student) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Student not found')
+  }
+  const grade = student.gradeLevel
+
+  console.log(11,grade)
+
+  const classes = await Class.find({ grade }).populate(
+    'teacherId',
+    '-password_reset_token -refreshToken -verificationInfo'
+  )
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Classes fetched successfully',
+    data: classes,
   })
 })
 

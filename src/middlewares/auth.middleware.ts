@@ -29,7 +29,10 @@ export const protect = async (
     req.user = user
     next()
   } catch (err) {
-    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid or expired token ' + err)
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      'Invalid or expired token ' + err
+    )
   }
 }
 
@@ -55,9 +58,10 @@ export const authorizeTypes = (...types: string[]) => {
     if (!req.user) {
       throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated')
     }
+    console.log(1, req.user)
 
-    const userTypes = req.user.type || []
-    const hasType = userTypes.some((t: string) => types.includes(t))
+    const userTypes = req.user.type
+    const hasType = types.includes(userTypes)
 
     if (!hasType) {
       throw new AppError(

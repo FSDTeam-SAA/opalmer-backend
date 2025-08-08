@@ -13,9 +13,8 @@ const userSchema: Schema = new Schema<IUser>(
       default: 'user',
     },
     type: {
-      type: [String],
+      type: String,
       enum: ['parent', 'student', 'teacher'],
-      default: [],
     },
     Id: { type: Number }, 
     password: { type: String, required: true, select: false }, 

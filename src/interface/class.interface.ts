@@ -1,7 +1,7 @@
 import { Document, Model, Types } from 'mongoose'
 
 export interface IClass extends Document {
-  grade: string
+  grade: number
   subject: string
   section: string
   schedule: string

@@ -4,7 +4,7 @@ import { IClass, ClassModel } from '../interface/class.interface'
 const classSchema: Schema<IClass> = new Schema(
   {
     teacherId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    grade: { type: String, required: true },
+    grade: { type: Number, required: true },
     subject: { type: String, required: true },
     section: { type: String },
     schedule: { type: String },
