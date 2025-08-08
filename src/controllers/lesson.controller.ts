@@ -91,7 +91,15 @@ const getLessonsByStudent = catchAsync(async (req, res) => {
       throw new AppError(400, "Student not found");
     }
 
-    const result = await Lesson.find({ studentId });
+    const result = await Lesson.find({ studentId })
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      });
 
     return sendResponse(res, {
       statusCode: 200,
