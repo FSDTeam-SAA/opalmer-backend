@@ -1,12 +1,12 @@
-import { Router } from 'express'
-import userRoutes from '../routes/user.routes'
-import stuAssignToClassRoutes from '../routes/stuAssignToClass.routes'
-import classRoutes from '../routes/class.routes'
+import { Router } from "express";
+import userRoutes from "../routes/user.routes";
+import stuAssignToClassRoutes from "../routes/stuAssignToClass.routes";
+import classRoutes from "../routes/class.routes";
 import { aboutAndTermRouter } from "./aboutAndTerm.router";
-import { featuresAndQuestionsRouter } from './featuresAndQuestions.router'
+import { featuresAndQuestionsRouter } from "./featuresAndQuestions.router";
+import lessonRouter from "./lesson.router";
 
-const router = Router()
-
+const router = Router();
 
 const moduleRoutes = [
   {
@@ -22,12 +22,16 @@ const moduleRoutes = [
     route: userRoutes,
   },
   {
-    path: '/student-assign-to-class',
+    path: "/student-assign-to-class",
     route: stuAssignToClassRoutes,
   },
   {
-    path: '/classes',
+    path: "/classes",
     route: classRoutes,
+  },
+  {
+    path: "/lessons",
+    route: lessonRouter,
   },
 ];
 
