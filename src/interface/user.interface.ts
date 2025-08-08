@@ -1,4 +1,4 @@
-import { Document, Model } from 'mongoose'
+import { Document, Model, Types } from 'mongoose'
 
 export interface IUser extends Document {
   username: string
@@ -6,7 +6,7 @@ export interface IUser extends Document {
   email?: string
   role: 'user' | 'admin' | 'administrator'
   type: 'parent' | 'student' | 'teacher'
-  Id?: number 
+  Id?: number
   password: string
   gradeLevel?: number
   state: 'active' | 'inactive' | 'suspended'
@@ -25,6 +25,7 @@ export interface IUser extends Document {
   fine?: number
   created_at?: Date
   updated_at?: Date
+  schoolId: Types.ObjectId
 }
 
 // Static methods interface
