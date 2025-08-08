@@ -11,5 +11,19 @@ router.post(
   behaviorController.createBehavior
 );
 
+router.get(
+  "/:behaviorId",
+  protect,
+  authorizeTypes("teacher"),
+  behaviorController.getSingleBehavior
+);
+
+router.get(
+  "/",
+  protect,
+  authorizeTypes("teacher"),
+  behaviorController.getAllBehaviors
+);
+
 const behaviorRouter = router;
 export default behaviorRouter;
