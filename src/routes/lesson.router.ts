@@ -27,5 +27,29 @@ router.get(
   lessonController.getLessonsByStudent
 );
 
+router.get(
+  "/",
+  protect,
+  authorizeTypes("student"),
+  // authorizeTypes("teacher"),
+  lessonController.getAllLessons
+);
+
+router.get(
+  "/:lessonId",
+  protect,
+  // authorizeTypes("student"),
+  authorizeTypes("teacher"),
+  lessonController.getSingleLesson
+);
+
+router.put(
+  "/update/:lessonId",
+  protect,
+  authorizeTypes("teacher"),
+  upload.single("document"),
+  lessonController.updateLesson
+);
+
 const lessonRouter = router;
 export default lessonRouter;
