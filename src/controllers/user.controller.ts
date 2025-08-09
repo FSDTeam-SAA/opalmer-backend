@@ -1,9 +1,9 @@
 import { Request, Response } from 'express'
 import { User } from '../models/user.model'
-import AppError from '../errors/AppError' 
+import AppError from '../errors/AppError'
 import catchAsync from '../utils/catchAsync'
 import { uploadToCloudinary } from '../utils/cloudinary'
-import jwt  from 'jsonwebtoken';
+import jwt from 'jsonwebtoken'
 
 /*****************
  * REGISTER USER *
@@ -13,7 +13,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     req.body
 
   // Validate required fields
-  if (!username || !Id || !age  || !password) {
+  if (!username || !Id || !age || !password) {
     throw new AppError(
       400,
       'All fields (username, Id, age, state, password) are required.'
@@ -93,7 +93,7 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
 
   // Generate JWT token
   const token = jwt.sign(
-    { userId: user._id, role: user.role },
+    { userId: user._id, role: user.role, type: user.type, Id: user.Id },
     process.env.JWT_SECRET || 'default_secret',
     { expiresIn: '7d' }
   )
