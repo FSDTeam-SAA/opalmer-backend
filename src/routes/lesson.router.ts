@@ -27,5 +27,36 @@ router.get(
   lessonController.getLessonsByStudent
 );
 
+router.get(
+  "/",
+  protect,
+  authorizeTypes("student"),
+  // authorizeTypes("teacher"),
+  lessonController.getAllLessons
+);
+
+router.get(
+  "/:lessonId",
+  protect,
+  // authorizeTypes("student"),
+  authorizeTypes("teacher"),
+  lessonController.getSingleLesson
+);
+
+router.put(
+  "/update/:lessonId",
+  protect,
+  authorizeTypes("teacher"),
+  upload.single("document"),
+  lessonController.updateLesson
+);
+
+router.delete(
+  "/delete/:lessonId",
+  protect,
+  authorizeTypes("teacher"),
+  lessonController.deleteLesson
+);
+
 const lessonRouter = router;
 export default lessonRouter;

@@ -91,7 +91,15 @@ const getLessonsByStudent = catchAsync(async (req, res) => {
       throw new AppError(400, "Student not found");
     }
 
-    const result = await Lesson.find({ studentId });
+    const result = await Lesson.find({ studentId })
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      });
 
     return sendResponse(res, {
       statusCode: 200,
@@ -104,10 +112,136 @@ const getLessonsByStudent = catchAsync(async (req, res) => {
   }
 });
 
+const getAllLessons = catchAsync(async (req, res) => {
+  try {
+    const result = await Lesson.find()
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Lessons fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const getSingleLesson = catchAsync(async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+
+    const result = await Lesson.findById(lessonId)
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Lesson fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const updateLesson = catchAsync(async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const { studentId, objective, note } = req.body;
+
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      throw new AppError(400, "Lesson not found");
+    }
+
+    const student = await User.findById(studentId);
+    if (!student) {
+      throw new AppError(400, "Student not found");
+    }
+
+    let document = { public_id: "", url: "" };
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.path);
+
+      if (uploadResult) {
+        document = {
+          public_id: uploadResult.public_id,
+          url: uploadResult.secure_url,
+        };
+      }
+    }
+
+    const updatedLesson = await Lesson.findByIdAndUpdate(
+      lessonId,
+      {
+        studentId,
+        objective,
+        note,
+        document,
+      },
+      { new: true }
+    );
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Lesson updated successfully",
+      data: updatedLesson,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const deleteLesson = catchAsync(async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      throw new AppError(400, "Lesson not found");
+    }
+
+    const deletedLesson = await Lesson.findByIdAndDelete(lessonId);
+    if (!deletedLesson) {
+      throw new AppError(404, "Lesson not found");
+    }
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Lesson deleted successfully",
+      data: null,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const lessonController = {
   createLesson,
   getLessonsByTeacher,
   getLessonsByStudent,
+  getAllLessons,
+  getSingleLesson,
+  updateLesson,
+  deleteLesson,
 };
 
 export default lessonController;
