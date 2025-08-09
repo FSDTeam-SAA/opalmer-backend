@@ -2,6 +2,8 @@ import AppError from '../errors/AppError'
 import catchAsync from '../utils/catchAsync'
 import { Attendance } from '../models/attendance.model'
 import { StuAssignToClass } from '../models/stuAssignToClass.model'
+import sendResponse from '../utils/sendResponse'
+import httpStatus from 'http-status'
 
 /**************************************
  * CREATE ATTENDANCE FOR ENTIRE CLASS *
@@ -53,5 +55,74 @@ export const createClassAttendance = catchAsync(async (req, res) => {
     success: true,
     message: 'Attendance created for all students in class',
     data: attendanceDocument,
+  })
+})
+
+/*************************
+ * // GET ALL ATTENDANCE *
+ *************************/
+// - IF DATE PROVIDE THEN GET ALL ATTENDANCE FOR THAT DATE
+// - IF NOT THEN FOR TODAY DATE GET ALL ATTENDANCE
+// - AND NEED TO GATE MONTHLY ATTENDANCE
+
+export const getAllAttendance = catchAsync(async (req, res) => {
+  const { classId, date } = req.query
+
+  const targetDate = date ? new Date(date.toString()) : new Date()
+
+  const startOfDay = new Date(targetDate)
+  startOfDay.setUTCHours(0, 0, 0, 0)
+
+  const endOfDay = new Date(targetDate)
+  endOfDay.setUTCHours(23, 59, 59, 999)
+
+  const attendance = await Attendance.find({
+    classId,
+    date: { $gte: startOfDay, $lte: endOfDay },
+  })
+
+  if (attendance.length === 0) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      'No attendance found for this date'
+    )
+  }
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Attendance fetched successfully',
+    data: attendance,
+  })
+})
+
+
+
+/****************************
+ * CHANGE ATTENDANCE STATUS *
+ ****************************/
+export const changeAttendanceStatus = catchAsync(async (req, res) => {
+  const { id } = req.params
+  const { present } = req.body
+
+  if (id === undefined) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Attendance Id is required')
+  }
+
+  const updatedAttendance = await Attendance.findByIdAndUpdate(
+    id,
+    { present },
+    { new: true }
+  )
+
+  if (!updatedAttendance) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Attendance not found')
+  }
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Attendance status updated successfully',
+    data: updatedAttendance,
   })
 })

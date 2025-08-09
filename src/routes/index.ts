@@ -5,6 +5,7 @@ import classRoutes from "../routes/class.routes";
 import { aboutAndTermRouter } from "./aboutAndTerm.router";
 import { featuresAndQuestionsRouter } from "./featuresAndQuestions.router";
 import lessonRouter from "./lesson.router";
+import attendanceRoutes from "./attendance.routes";
 
 const router = Router();
 
@@ -33,6 +34,10 @@ const moduleRoutes = [
     path: "/lessons",
     route: lessonRouter,
   },
+  {
+    path: "/attendances",
+    route: attendanceRoutes,
+  }
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
