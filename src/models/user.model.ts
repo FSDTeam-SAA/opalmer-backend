@@ -39,7 +39,7 @@ const userSchema: Schema = new Schema<IUser>(
     refreshToken: { type: String, default: '' },
     credit: { type: Number, default: null },
     fine: { type: Number},
-    schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+    schoolId: { type: Schema.Types.ObjectId, ref: 'School' },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )

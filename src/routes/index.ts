@@ -8,6 +8,7 @@ import lessonRouter from './lesson.router'
 import attendanceRoutes from './attendance.routes'
 import behaviorRouter from './behavior.router'
 import schoolRouter from './school.router'
+import learningTipsRouters from './learningTip.routes'
 
 const router = Router()
 
@@ -47,6 +48,10 @@ const moduleRoutes = [
   {
     path: '/school',
     route: schoolRouter,
+  },
+  {
+    path: '/learning-tips',
+    route: learningTipsRouters,
   },
 ]
 
