@@ -7,16 +7,16 @@ import { getPaginationParams, buildMetaPagination } from '../utils/pagination'
 
 // CREATE
 export const createLearningTip = catchAsync(async (req, res) => {
-  const { administratorId, img, name, description, schoolId } = req.body
+  const { administratorId, img, title, description, schoolId } = req.body
 
-  if (!administratorId || !name || !description || !schoolId) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Missing required fields')
-  }
+//   if (!administratorId || !name || !description || !schoolId) {
+//     throw new AppError(httpStatus.BAD_REQUEST, 'Missing required fields')
+//   }
 
   const newTip = await LearningTip.create({
     administratorId,
     img,
-    name,
+    title,
     description,
     schoolId,
   })
