@@ -20,5 +20,10 @@ router.get(
 
 router.get("/", schoolController.getAllSchools);
 
+router.get(
+  "/:id",
+  schoolController.getSingleSchool
+);
+
 const schoolRouter = router;
 export default schoolRouter;

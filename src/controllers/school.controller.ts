@@ -82,7 +82,7 @@ const getSingleSchool = catchAsync(async (req, res) => {
     return sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "School fetched successfully",
+      message: "School get successfully",
       data: result,
     });
   } catch (error) {
