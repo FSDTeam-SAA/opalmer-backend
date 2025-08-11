@@ -14,8 +14,6 @@ export const createMessage = catchAsync(async (req: Request, res: Response) => {
   const { message, roomId, userId } = req.body
   const files = req.files as Express.Multer.File[]
 
-  console.log(1, req.body)
-
   if (!mongoose.Types.ObjectId.isValid(roomId)) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Invalid room ID')
   }

@@ -1,13 +1,16 @@
 import { Document, Model, Types } from 'mongoose'
 
+interface IParticipant {
+  userId: Types.ObjectId
+}
 export interface IRoom extends Document {
-  teacherId: Types.ObjectId
-  studentId: Types.ObjectId
-  parentId: Types.ObjectId
+  name?: string
+  avatar?: string
   lastMessage?: string
   isBlocked: boolean
   created_at?: Date
   updated_at?: Date
+  participants: IParticipant[]
 }
 
 export interface RoomModel extends Model<IRoom> {

@@ -10,6 +10,8 @@ import behaviorRouter from './behavior.router'
 import schoolRouter from './school.router'
 import learningTipsRouters from './learningTip.routes'
 import messageRouter from './message.route'
+import roomsRouter from './room.route'
+import path from 'path'
 
 const router = Router()
 
@@ -58,6 +60,10 @@ const moduleRoutes = [
     path: '/message',
     route: messageRouter,
   },
+  {
+    path: '/rooms',
+    route: roomsRouter, 
+  }
 ]
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))
