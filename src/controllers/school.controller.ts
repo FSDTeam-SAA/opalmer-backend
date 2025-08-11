@@ -90,11 +90,32 @@ const getSingleSchool = catchAsync(async (req, res) => {
   }
 });
 
+const updateSchool = catchAsync(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await school.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
+    if (!result) {
+      throw new AppError(404, "School not found");
+    }
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "School updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const schoolController = {
   createSchool,
   getAllSchools,
   getMySchool,
   getSingleSchool,
+  updateSchool,
 };
 
 export default schoolController;

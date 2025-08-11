@@ -19,10 +19,13 @@ router.get(
 );
 
 router.get("/", schoolController.getAllSchools);
+router.get("/:id", schoolController.getSingleSchool);
 
-router.get(
-  "/:id",
-  schoolController.getSingleSchool
+router.put(
+  "/update/:id",
+  protect,
+  authorizeRoles("administrator"),
+  schoolController.updateSchool
 );
 
 const schoolRouter = router;
