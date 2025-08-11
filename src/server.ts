@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import { connectDB } from './config/db'
 import { Server } from 'socket.io'
 import { createServer } from 'http'
+import { setupMessageSocket } from './sockets/message.socket'
 
 dotenv.config()
 
@@ -16,6 +17,8 @@ export const io = new Server(httpserver, {
     methods: ['GET', 'POST'],
   },
 })
+
+setupMessageSocket(io)
 
 connectDB().then(() => {
   httpserver.listen(PORT, () => {
