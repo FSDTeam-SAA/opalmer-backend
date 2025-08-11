@@ -10,7 +10,16 @@ import { uploadToCloudinary } from '../utils/cloudinary'
  * * FOR 1-TO-1 ROOMS, ENSURE NO DUPLICATE ROOM EXISTS BETWEEN THE TWO USERS *
  *****************************************************************************/
 export const createRoom = catchAsync(async (req: Request, res: Response) => {
-  const { name, participants } = req.body
+  let { name, participants } = req.body
+
+  // Parse participants from JSON string if needed
+  if (typeof participants === 'string') {
+    try {
+      participants = JSON.parse(participants)
+    } catch (err) {
+      throw new AppError(400, 'Participants must be valid JSON array')
+    }
+  }
 
   if (
     !participants ||
@@ -20,48 +29,17 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(400, 'Participants array is required')
   }
 
-  // Parse participants if sent as JSON string (common in form-data)
-  let parsedParticipants = participants
-  if (typeof participants === 'string') {
-    parsedParticipants = JSON.parse(participants)
-  }
-
-  // 1-to-1 duplicate room check
-  if (parsedParticipants.length === 2) {
-    const userIds = parsedParticipants.map(
-      (p: any) => new mongoose.Types.ObjectId(p.userId)
-    )
-
-    const existingRoom = await Room.findOne({
-      participants: {
-        $all: userIds.map((id) => ({ $elemMatch: { userId: id } })),
-        $size: 2,
-      },
-      name: { $exists: false },
-    })
-
-    if (existingRoom) {
-      return res.status(200).json({
-        success: true,
-        message: '1-to-1 room between these users already exists',
-        data: existingRoom,
-      })
-    }
-  }
-
-  // Handle avatar upload via Cloudinary
+  // Avatar upload to Cloudinary
   let avatarUrl = ''
   if (req.file) {
     const uploadResult = await uploadToCloudinary(req.file.path)
-    if (uploadResult) {
-      avatarUrl = uploadResult.secure_url
-    }
+    if (uploadResult) avatarUrl = uploadResult.secure_url
   }
 
   const room = await Room.create({
     name,
     avatar: avatarUrl,
-    participants: parsedParticipants,
+    participants,
   })
 
   res.status(201).json({
@@ -70,6 +48,7 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
     data: room,
   })
 })
+
 /*********************
  * * EDIT ROOM BY ID *
  *********************/
