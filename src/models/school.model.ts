@@ -4,6 +4,7 @@ import { ISchool } from "../interface/school.interface";
 const schoolSchema = new Schema<ISchool>(
   {
     name: { type: String, required: true, trim: true, unique: true },
+    administrator: { type: Schema.Types.ObjectId, ref: "User" },
     code: { type: String, trim: true, unique: true },
     address: { type: String, trim: true },
     city: { type: String, trim: true },
