@@ -4,6 +4,7 @@ import { Attendance } from '../models/attendance.model'
 import { StuAssignToClass } from '../models/stuAssignToClass.model'
 import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
+import { buildMetaPagination, getPaginationParams } from '../utils/pagination'
 
 /**************************************
  * CREATE ATTENDANCE FOR ENTIRE CLASS *
@@ -61,10 +62,6 @@ export const createClassAttendance = catchAsync(async (req, res) => {
 /*************************
  * // GET ALL ATTENDANCE *
  *************************/
-// - IF DATE PROVIDE THEN GET ALL ATTENDANCE FOR THAT DATE
-// - IF NOT THEN FOR TODAY DATE GET ALL ATTENDANCE
-// - AND NEED TO GATE MONTHLY ATTENDANCE
-
 export const getAllAttendance = catchAsync(async (req, res) => {
   const { classId, date } = req.query
 
@@ -96,8 +93,6 @@ export const getAllAttendance = catchAsync(async (req, res) => {
   })
 })
 
-
-
 /****************************
  * CHANGE ATTENDANCE STATUS *
  ****************************/
@@ -124,5 +119,44 @@ export const changeAttendanceStatus = catchAsync(async (req, res) => {
     success: true,
     message: 'Attendance status updated successfully',
     data: updatedAttendance,
+  })
+})
+
+/*********************************
+ * GET ATTENDANCE FOR A STUDENT  *
+ *********************************/
+export const getStudentAttendance = catchAsync(async (req, res) => {
+  const { userId, classId } = req.query
+
+  if (!userId || !classId) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'userId and classId are required'
+    )
+  }
+
+  // Pagination params
+  const { page, limit, skip } = getPaginationParams(req.query)
+
+  // Fetch total count for pagination
+  const totalItems = await Attendance.countDocuments({ userId, classId })
+
+  // Fetch paginated data (latest first)
+  const attendanceRecords = await Attendance.find({ userId, classId })
+    .sort({ date: -1 }) // latest first
+    .skip(skip)
+    .limit(limit)
+
+  if (attendanceRecords.length === 0) {
+    throw new AppError(httpStatus.NOT_FOUND, 'No attendance records found')
+  }
+
+  const meta = buildMetaPagination(totalItems, page, limit)
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Student attendance fetched successfully',
+    data: { attendanceRecords, meta },
   })
 })
