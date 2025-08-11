@@ -11,5 +11,14 @@ router.post(
   schoolController.createSchool
 );
 
+router.get(
+  "/my-school",
+  protect,
+  authorizeRoles("administrator"),
+  schoolController.getMySchool
+);
+
+router.get("/", schoolController.getAllSchools);
+
 const schoolRouter = router;
 export default schoolRouter;
