@@ -4,6 +4,7 @@ import { connectDB } from './config/db'
 import { Server } from 'socket.io'
 import { createServer } from 'http'
 import { setupMessageSocket } from './sockets/message.socket'
+import { setupWebRTCSocket } from './sockets/webrtc.socket'
 
 dotenv.config()
 
@@ -19,6 +20,7 @@ export const io = new Server(httpserver, {
 })
 
 setupMessageSocket(io)
+setupWebRTCSocket(io)
 
 connectDB().then(() => {
   httpserver.listen(PORT, () => {
