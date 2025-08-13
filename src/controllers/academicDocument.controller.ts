@@ -95,7 +95,15 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
       throw new AppError(400, "Student not found");
     }
 
-    const result = await AcademicDocument.find({ studentId: user._id });
+    const result = await AcademicDocument.find({ studentId: user._id })
+      .populate({
+        path: "studentId",
+        select: "username Id gradeLevel",
+      })
+      .populate({
+        path: "schoolId",
+        select: "name",
+      });
 
     return sendResponse(res, {
       statusCode: 200,
@@ -169,11 +177,73 @@ const getSingleAcademicDocument = catchAsync(async (req, res) => {
   }
 });
 
+const updateAcademicDocument = catchAsync(async (req, res) => {
+  try {
+    const { academicDocumentId } = req.params;
+
+    const doc = await AcademicDocument.findById(academicDocumentId);
+    if (!doc) {
+      throw new AppError(400, "Academic document not found");
+    }
+
+    let document = { public_id: "", url: "" };
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.path);
+      if (uploadResult) {
+        document = {
+          public_id: uploadResult.public_id,
+          url: uploadResult.secure_url,
+        };
+      }
+    }
+
+    const updatedDocument = await AcademicDocument.findByIdAndUpdate(
+      academicDocumentId,
+      {
+        document,
+      },
+      { new: true }
+    );
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Academic document updated successfully",
+      data: updatedDocument,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const deleteAcademicDocument = catchAsync(async (req, res) => {
+  try {
+    const { academicDocumentId } = req.params;
+
+    const document = await AcademicDocument.findById(academicDocumentId);
+    if (!document) {
+      throw new AppError(400, "Academic document not found");
+    }
+
+    await AcademicDocument.findByIdAndDelete(academicDocumentId);
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Academic document deleted successfully",
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const academicDocumentController = {
   createAcademicDocument,
   getAcademicDocumentForStudent,
   getAcademicDocumentForTeacher,
   getSingleAcademicDocument,
+  updateAcademicDocument,
+  deleteAcademicDocument,
 };
 
 export default academicDocumentController;

@@ -15,8 +15,8 @@ router.post(
 
 router.get(
   "/student-documents",
-  //   protect,
-  //   authorizeTypes("teacher"),
+  protect,
+  authorizeTypes("student"),
   academicDocumentController.getAcademicDocumentForStudent
 );
 
@@ -29,9 +29,24 @@ router.get(
 
 router.get(
   "/:academicDocumentId",
-//   protect,
-//   authorizeTypes("teacher"),
+  protect,
+  authorizeTypes("teacher"),
   academicDocumentController.getSingleAcademicDocument
+);
+
+router.put(
+  "/update/:id",
+  protect,
+  authorizeTypes("teacher"),
+  upload.single("document"),
+  academicDocumentController.updateAcademicDocument
+);
+
+router.delete(
+  "/delete/:id",
+  protect,
+  authorizeTypes("teacher"),
+  academicDocumentController.deleteAcademicDocument
 );
 
 const academicDocumentRouter = router;
