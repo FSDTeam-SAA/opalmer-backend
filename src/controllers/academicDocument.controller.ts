@@ -139,10 +139,41 @@ const getAcademicDocumentForTeacher = catchAsync(async (req, res) => {
   }
 });
 
+const getSingleAcademicDocument = catchAsync(async (req, res) => {
+  try {
+    const { academicDocumentId } = req.params;
+
+    const document = await AcademicDocument.findById(academicDocumentId);
+    if (!document) {
+      throw new AppError(400, "Academic document not found");
+    }
+
+    const result = await AcademicDocument.findById(academicDocumentId)
+      .populate({
+        path: "studentId",
+        select: "username Id gradeLevel",
+      })
+      .populate({
+        path: "schoolId",
+        select: "name",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Academic document get successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const academicDocumentController = {
   createAcademicDocument,
   getAcademicDocumentForStudent,
   getAcademicDocumentForTeacher,
+  getSingleAcademicDocument,
 };
 
 export default academicDocumentController;

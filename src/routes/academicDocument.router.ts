@@ -27,6 +27,13 @@ router.get(
   academicDocumentController.getAcademicDocumentForTeacher
 );
 
+router.get(
+  "/:academicDocumentId",
+//   protect,
+//   authorizeTypes("teacher"),
+  academicDocumentController.getSingleAcademicDocument
+);
+
 const academicDocumentRouter = router;
 
 export default academicDocumentRouter;
