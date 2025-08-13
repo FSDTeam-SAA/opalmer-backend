@@ -15,6 +15,10 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       throw new AppError(400, "Teacher not found");
     }
 
+    if (user.schoolId === null) {
+      throw new AppError(400, "You are not a teacher of any school");
+    }
+
     const student = await User.findById(studentId);
     if (!student) {
       throw new AppError(400, "Student not found");
@@ -27,17 +31,11 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       );
     }
 
-    const teacherSchool = await User.findById(user.schoolId);
-    if (!teacherSchool) {
-      throw new AppError(400, "You are not a teacher of any school");
+    if (student.schoolId === null) {
+      throw new AppError(400, "Student is not enrolled in any school");
     }
 
-    const school = await User.findById(user.schoolId);
-    if (!school) {
-      throw new AppError(400, "You are not a student of any school");
-    }
-
-    if (user.schoolId !== student.schoolId) {
+    if (String(user.schoolId) !== String(student.schoolId)) {
       throw new AppError(
         400,
         "You can't upload academic documents for a student from another school"
@@ -46,10 +44,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
 
     let document = { public_id: "", url: "" };
     if (req.file) {
-      console.log(req.file);
       const uploadResult = await uploadToCloudinary(req.file.path);
-      console.log(12, uploadResult);
-
       if (uploadResult) {
         document = {
           public_id: uploadResult.public_id,
@@ -64,11 +59,48 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       document,
     });
 
+    const populatedDocument = await AcademicDocument.findById(
+      academicDocument._id
+    )
+      .populate({
+        path: "studentId",
+        select: "username Id gradeLevel schoolId",
+        populate: {
+          path: "schoolId",
+          select: "name",
+        },
+      })
+      .populate({
+        path: "schoolId",
+        select: "name",
+      });
+
     sendResponse(res, {
       statusCode: 200,
       success: true,
       message: "Academic document created successfully",
-      data: academicDocument,
+      data: populatedDocument,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
+  try {
+    const { _id: userId } = req.user as any;
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError(400, "Student not found");
+    }
+
+    const result = await AcademicDocument.find({ studentId: user._id });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Academic documents fetched successfully",
+      data: result,
     });
   } catch (error) {
     throw new AppError(500, error as string);
@@ -77,6 +109,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
 
 const academicDocumentController = {
   createAcademicDocument,
+  getAcademicDocumentForStudent,
 };
 
 export default academicDocumentController;
