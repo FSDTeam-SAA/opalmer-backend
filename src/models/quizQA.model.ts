@@ -1,18 +1,24 @@
-import { Model, Types } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
+import { IQuizQA, QuizQAModel } from '../interface/quizQA.interface'
 
-export interface IQuestion {
-  question: string
-  options: string[]
-  answer: string
-}
+const questionSchema = new Schema(
+  {
+    question: { type: String, required: true },
+    options: { type: [String], required: true },
+    answer: { type: String, required: true },
+  },
+  { _id: false }
+)
 
-export interface IQuizQA {
-  _id?: Types.ObjectId
-  quizId: Types.ObjectId // reference to Quiz
-  questions: IQuestion[]
-  created_at?: Date
-  updated_at?: Date
-}
+const quizQASchema: Schema<IQuizQA> = new Schema(
+  {
+    quizId: { type: Schema.Types.ObjectId, ref: 'Quiz', required: true },
+    questions: { type: [questionSchema], required: true },
+  },
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+)
 
-// Model interface
-export interface QuizQAModel extends Model<IQuizQA> {}
+export const QuizQA = mongoose.model<IQuizQA, QuizQAModel>(
+  'QuizQA',
+  quizQASchema
+)
