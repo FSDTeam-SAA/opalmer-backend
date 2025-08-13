@@ -13,6 +13,20 @@ router.post(
   academicDocumentController.createAcademicDocument
 );
 
+router.get(
+  "/student-documents",
+  //   protect,
+  //   authorizeTypes("teacher"),
+  academicDocumentController.getAcademicDocumentForStudent
+);
+
+router.get(
+  "/teacher-documents",
+  protect,
+  authorizeTypes("teacher"),
+  academicDocumentController.getAcademicDocumentForTeacher
+);
+
 const academicDocumentRouter = router;
 
 export default academicDocumentRouter;
