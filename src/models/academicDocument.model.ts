@@ -1,11 +1,10 @@
-import { Schema } from "mongoose";
+import { model, Schema } from "mongoose";
 import { IAcademicDocument } from "../interface/academicDocument.interface";
 
 const academicDocumentSchema = new Schema<IAcademicDocument>(
   {
     studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
-    schoolId: { type: Schema.Types.ObjectId, ref: "School", required: true },
+    schoolId: { type: Schema.Types.ObjectId, ref: "School" },
     document: {
       public_id: { type: String, default: "" },
       url: { type: String, default: "" },
@@ -17,5 +16,9 @@ const academicDocumentSchema = new Schema<IAcademicDocument>(
   }
 );
 
-const AcademicDocument = academicDocumentSchema;
+const AcademicDocument = model<IAcademicDocument>(
+  "AcademicDocument",
+  academicDocumentSchema
+);
+
 export default AcademicDocument;
