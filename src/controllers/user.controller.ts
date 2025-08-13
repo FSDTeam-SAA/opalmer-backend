@@ -19,6 +19,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     password,
     email,
     role,
+    schoolId,
   } = req.body;
 
   // Validate required fields
@@ -63,6 +64,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     gradeLevel,
     email,
     role,
+    schoolId,
   });
 
   res.status(201).json({
@@ -70,6 +72,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     message: "User registered successfully",
     data: {
       id: user._id,
+      schoolId: user.schoolId,
       username: user.username,
       age: user.age,
       state: user.state,
