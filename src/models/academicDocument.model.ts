@@ -4,6 +4,7 @@ import { IAcademicDocument } from "../interface/academicDocument.interface";
 const academicDocumentSchema = new Schema<IAcademicDocument>(
   {
     studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    teacherId: { type: Schema.Types.ObjectId, ref: "User" },
     schoolId: { type: Schema.Types.ObjectId, ref: "School" },
     document: {
       public_id: { type: String, default: "" },
