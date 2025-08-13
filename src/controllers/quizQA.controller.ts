@@ -4,6 +4,9 @@ import { generateQuizQuestions } from '../services/quizAI.service'
 import catchAsync from '../utils/catchAsync'
 import AppError from '../errors/AppError'
 
+/************************
+ * CREATE AI QUIESTIONS *
+ ************************/
 export const createAIQuestions = catchAsync(
   async (req: Request, res: Response) => {
     const { quizId, topic } = req.body

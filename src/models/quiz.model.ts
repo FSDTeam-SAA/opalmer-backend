@@ -8,7 +8,7 @@ const quizSchema: Schema<IQuiz> = new Schema(
     title: { type: String, required: true },
     description: { type: String, default: '' },
     image: { type: String, default: '' },
-    time: { type: Number, default: 0 }, // in minutes
+    time: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )

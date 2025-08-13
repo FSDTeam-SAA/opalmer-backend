@@ -11,7 +11,8 @@ import schoolRouter from './school.router'
 import learningTipsRouters from './learningTip.routes'
 import messageRouter from './message.route'
 import roomsRouter from './room.route'
-import path from 'path'
+import quizzesRouter from './quiz.routes'
+import quizzesQARouter from './quizQA.routes'
 
 const router = Router()
 
@@ -62,8 +63,16 @@ const moduleRoutes = [
   },
   {
     path: '/rooms',
-    route: roomsRouter, 
-  }
+    route: roomsRouter,
+  },
+  {
+    path: '/quizzes',
+    route: quizzesRouter,
+  },
+  {
+    path: '/quiz/qa',
+    route: quizzesQARouter,
+  },
 ]
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))
