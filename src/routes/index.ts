@@ -13,6 +13,7 @@ import messageRouter from "./message.route";
 import roomsRouter from "./room.route";
 import path from "path";
 import academicDocumentRouter from "./academicDocument.router";
+import { homeworkRouter } from "./homeWork.routes";
 
 const router = Router();
 
@@ -68,6 +69,10 @@ const moduleRoutes = [
   {
     path: "/academicDocument",
     route: academicDocumentRouter,
+  },
+  {
+    path: "/homework",
+    route: homeworkRouter,
   },
 ];
 
