@@ -6,7 +6,15 @@ const homeworkSchema: Schema<IHomework> = new Schema(
     classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
-    file: { type: [String], default: [] }, 
+      file: {
+      type: [
+        {
+          public_id: { type: String, default: "" },
+          url: { type: String, default: "" }
+        }
+      ],
+      default: []
+    },
     archived: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }

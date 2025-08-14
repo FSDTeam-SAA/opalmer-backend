@@ -11,17 +11,17 @@ cloudinary.config({
 export const uploadToCloudinary = async (localFilePath: string) => {
   try {
     if (!localFilePath) {
-      console.log("❌ Local file path missing");
+      // console.log("❌ Local file path missing");
       return null;
     }
 
-    console.log("📤 Uploading file to Cloudinary:", localFilePath);
+    // console.log("📤 Uploading file to Cloudinary:", localFilePath);
 
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "raw",
     });
 
-    console.log("✅ Upload Success:", response);
+    // console.log("✅ Upload Success:", response);
 
     fs.unlinkSync(localFilePath);
 

@@ -11,6 +11,9 @@ import schoolRouter from './school.router'
 import learningTipsRouters from './learningTip.routes'
 import messageRouter from './message.route'
 import roomsRouter from './room.route'
+import academicDocumentRouter from './academicDocument.router'
+import { homeworkRouter } from './homeWork.routes'
+import parentRouter from './parent.router'
 import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
 
@@ -64,6 +67,19 @@ const moduleRoutes = [
   {
     path: '/rooms',
     route: roomsRouter,
+  },
+
+  {
+    path: '/academicDocument',
+    route: academicDocumentRouter,
+  },
+  {
+    path: '/homework',
+    route: homeworkRouter,
+  },
+  {
+    path: '/parent',
+    route: parentRouter,
   },
   {
     path: '/quizzes',

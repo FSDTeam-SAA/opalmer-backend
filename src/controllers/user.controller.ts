@@ -19,6 +19,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     password,
     email,
     role,
+    schoolId,
   } = req.body;
 
   // Validate required fields
@@ -51,6 +52,11 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     }
   }
 
+  // Check if user is a student or teacher and schoolId is missing
+  if ((type === "student" || type === "teacher") && !schoolId) {
+    throw new AppError(400, `School ID is required for ${type} registration.`);
+  }
+
   // Create user
   const user = await User.create({
     username,
@@ -63,6 +69,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     gradeLevel,
     email,
     role,
+    schoolId,
   });
 
   res.status(201).json({
@@ -70,6 +77,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     message: "User registered successfully",
     data: {
       id: user._id,
+      schoolId: user.schoolId,
       username: user.username,
       age: user.age,
       state: user.state,
