@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose'
+import { IQuizResult } from '../interface/quizResult.interface'
 
-const quizResultSchema = new Schema(
+const quizResultSchema = new Schema<IQuizResult>(
   {
     quizId: { type: Schema.Types.ObjectId, ref: 'Quiz', required: true },
     studentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -27,4 +28,7 @@ const quizResultSchema = new Schema(
   { timestamps: true }
 )
 
-export const QuizResult = mongoose.model('QuizResult', quizResultSchema)
+export const QuizResult = mongoose.model(
+  'QuizResult',
+  quizResultSchema
+)
