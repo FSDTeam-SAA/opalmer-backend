@@ -26,7 +26,7 @@ const parentSchema = new Schema<IParent>({
   },
   address: { type: String, required: true },
   phoneNumber: { type: String, required: true },
-  schoolId: { type: Schema.Types.ObjectId, ref: "School", required: true },
+  schoolId: { type: Schema.Types.ObjectId, ref: "School" },
   childrenId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 });
 
