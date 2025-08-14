@@ -3,6 +3,7 @@ import Parent from "../models/parent.model";
 import school from "../models/school.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
+import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
 
 const addParent = catchAsync(async (req, res) => {
@@ -14,11 +15,34 @@ const addParent = catchAsync(async (req, res) => {
       throw new AppError(400, "Children not found");
     }
 
-    const result = await Parent.create({
+    let avatar = { public_id: "", url: "" };
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.path);
+      if (uploadResult) {
+        avatar = {
+          public_id: uploadResult.public_id,
+          url: uploadResult.secure_url,
+        };
+      }
+    }
+
+    const addParent = await Parent.create({
       ...req.body,
-      children: childrenId,
-      school: childrenExist.schoolId,
+      avatar,
+      childrenId: childrenId,
+      schoolId: childrenExist.schoolId,
     });
+
+    const result = await Parent.findById(addParent._id)
+      .populate({
+        path: "childrenId",
+        select: "username Id gradeLevel schoolId",
+      })
+      .populate({
+        path: "schoolId",
+        select: "name",
+      })
+      .select("-password");
 
     return sendResponse(res, {
       statusCode: 200,

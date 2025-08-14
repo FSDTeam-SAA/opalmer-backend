@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Model, Types } from "mongoose";
 
 export interface IParent {
   name: string;
@@ -14,4 +14,11 @@ export interface IParent {
   };
   schoolId: Types.ObjectId;
   childrenId: Types.ObjectId;
+}
+
+export interface parentSchema extends Model<IParent> {
+  isPasswordMatched(
+    plainTextPassword: string,
+    hashPassword: string
+  ): Promise<boolean>;
 }
