@@ -24,8 +24,12 @@ const parentSchema = new Schema<IParent>({
     ],
     required: true,
   },
-  address: { type: String, required: true },
+  address: { type: String },
   phoneNumber: { type: String, required: true },
+  avatar: {
+    public_id: { type: String, default: "" },
+    url: { type: String, default: "" },
+  },
   schoolId: { type: Schema.Types.ObjectId, ref: "School" },
   childrenId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 });

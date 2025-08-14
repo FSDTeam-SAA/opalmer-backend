@@ -8,6 +8,10 @@ export interface IParent {
   relationship: string;
   address?: string;
   phoneNumber: string;
+  avatar?: {
+    public_id: string;
+    url: string;
+  };
   schoolId: Types.ObjectId;
   childrenId: Types.ObjectId;
 }
