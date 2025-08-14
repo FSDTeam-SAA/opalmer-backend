@@ -88,6 +88,9 @@ export const saveQuizProgress = catchAsync(async (req, res) => {
   })
 })
 
+/**********************
+ * SUBMIT THE QUIZ API *
+ **********************/
 export const submitQuiz = catchAsync(async (req, res) => {
   const { quizResultId } = req.body
   const studentId = req.user?._id

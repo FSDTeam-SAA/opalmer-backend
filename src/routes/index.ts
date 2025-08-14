@@ -16,6 +16,7 @@ import { homeworkRouter } from './homeWork.routes'
 import parentRouter from './parent.router'
 import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
+import quizzesTestRouter from '../routes/quizResult.routes'
 
 const router = Router()
 
@@ -89,6 +90,10 @@ const moduleRoutes = [
     path: '/quiz/qa',
     route: quizzesQARouter,
   },
+  {
+    path: '/test/quizzes',
+    route: quizzesTestRouter,
+  }
 ]
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))
