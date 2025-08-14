@@ -1,86 +1,96 @@
-import { Router } from "express";
-import userRoutes from "../routes/user.routes";
-import stuAssignToClassRoutes from "../routes/stuAssignToClass.routes";
-import classRoutes from "../routes/class.routes";
-import { aboutAndTermRouter } from "./aboutAndTerm.router";
-import { featuresAndQuestionsRouter } from "./featuresAndQuestions.router";
-import lessonRouter from "./lesson.router";
-import attendanceRoutes from "./attendance.routes";
-import behaviorRouter from "./behavior.router";
-import schoolRouter from "./school.router";
-import learningTipsRouters from "./learningTip.routes";
-import messageRouter from "./message.route";
-import roomsRouter from "./room.route";
-import path from "path";
-import academicDocumentRouter from "./academicDocument.router";
-import { homeworkRouter } from "./homeWork.routes";
-import parentRouter from "./parent.router";
+import { Router } from 'express'
+import userRoutes from '../routes/user.routes'
+import stuAssignToClassRoutes from '../routes/stuAssignToClass.routes'
+import classRoutes from '../routes/class.routes'
+import { aboutAndTermRouter } from './aboutAndTerm.router'
+import { featuresAndQuestionsRouter } from './featuresAndQuestions.router'
+import lessonRouter from './lesson.router'
+import attendanceRoutes from './attendance.routes'
+import behaviorRouter from './behavior.router'
+import schoolRouter from './school.router'
+import learningTipsRouters from './learningTip.routes'
+import messageRouter from './message.route'
+import roomsRouter from './room.route'
+import academicDocumentRouter from './academicDocument.router'
+import { homeworkRouter } from './homeWork.routes'
+import parentRouter from './parent.router'
+import quizzesRouter from './quiz.routes'
+import quizzesQARouter from './quizQA.routes'
 
-const router = Router();
+const router = Router()
 
 const moduleRoutes = [
   {
-    path: "/featuresAndQuestions",
+    path: '/featuresAndQuestions',
     route: featuresAndQuestionsRouter,
   },
   {
-    path: "/aboutAndTerm",
+    path: '/aboutAndTerm',
     route: aboutAndTermRouter,
   },
   {
-    path: "/users",
+    path: '/users',
     route: userRoutes,
   },
   {
-    path: "/student-assign-to-class",
+    path: '/student-assign-to-class',
     route: stuAssignToClassRoutes,
   },
   {
-    path: "/classes",
+    path: '/classes',
     route: classRoutes,
   },
   {
-    path: "/lessons",
+    path: '/lessons',
     route: lessonRouter,
   },
   {
-    path: "/attendances",
+    path: '/attendances',
     route: attendanceRoutes,
   },
   {
-    path: "/behavior",
+    path: '/behavior',
     route: behaviorRouter,
   },
   {
-    path: "/school",
+    path: '/school',
     route: schoolRouter,
   },
   {
-    path: "/learning-tips",
+    path: '/learning-tips',
     route: learningTipsRouters,
   },
   {
-    path: "/message",
+    path: '/message',
     route: messageRouter,
   },
   {
-    path: "/rooms",
+    path: '/rooms',
     route: roomsRouter,
   },
+
   {
-    path: "/academicDocument",
+    path: '/academicDocument',
     route: academicDocumentRouter,
   },
   {
-    path: "/homework",
+    path: '/homework',
     route: homeworkRouter,
   },
   {
-    path: "/parent",
+    path: '/parent',
     route: parentRouter,
   },
-];
+  {
+    path: '/quizzes',
+    route: quizzesRouter,
+  },
+  {
+    path: '/quiz/qa',
+    route: quizzesQARouter,
+  },
+]
 
-moduleRoutes.forEach((route) => router.use(route.path, route.route));
+moduleRoutes.forEach((route) => router.use(route.path, route.route))
 
-export default router;
+export default router
