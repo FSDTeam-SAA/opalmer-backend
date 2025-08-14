@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 export interface IParent {
   name: string;
   email: string;
@@ -5,6 +7,6 @@ export interface IParent {
   relationship: string;
   address: string;
   phoneNumber: string;
-  schoolId: string;
-  childrenId: string;
+  schoolId: Types.ObjectId;
+  childrenId: Types.ObjectId;
 }
