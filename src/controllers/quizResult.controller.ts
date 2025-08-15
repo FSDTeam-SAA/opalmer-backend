@@ -59,10 +59,10 @@ export const startQuiz = catchAsync(async (req, res) => {
  * SAVE QUIZ PROGRESS *
  **********************/
 export const saveQuizProgress = catchAsync(async (req, res) => {
-  const { quizResultId, question, selectedAnswer, remainingTime } = req.body
+  const { quizId, question, selectedAnswer, remainingTime } = req.body
   const studentId = req.user?._id
 
-  const result = await QuizResult.findOne({ quizResultId, studentId })
+  const result = await QuizResult.findOne({ quizId, studentId })
   if (!result)
     throw new AppError(httpStatus.NOT_FOUND, 'Quiz progress not found')
 
@@ -92,13 +92,13 @@ export const saveQuizProgress = catchAsync(async (req, res) => {
  * SUBMIT THE QUIZ API *
  **********************/
 export const submitQuiz = catchAsync(async (req, res) => {
-  const { quizResultId } = req.body
+  const { quizId } = req.body
   const studentId = req.user?._id
 
-  const result = await QuizResult.findOne({ quizResultId, studentId })
+  const result = await QuizResult.findOne({ quizId, studentId })
   if (!result) throw new AppError(404, 'Quiz progress not found')
 
-  const quizQA = await QuizQA.findOne({ quizResultId })
+  const quizQA = await QuizQA.findOne({ quizId })
   if (!quizQA) throw new AppError(404, 'Quiz questions not found')
 
   let correctCount = 0
