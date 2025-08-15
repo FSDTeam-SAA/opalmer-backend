@@ -7,7 +7,7 @@ export interface IQuiz {
   title: string
   description?: string
   image?: string
-  time?: number // in minutes
+  time: number // in minutes
   created_at?: Date
   updated_at?: Date
 }

@@ -1,20 +1,34 @@
-import mongoose, { Schema } from 'mongoose'
-import {
-  INotification,
-  NotificationModel,
-} from '../interface/notification.interface'
+import mongoose, { Schema, Model } from 'mongoose'
+import { INotification } from '../interface/notification.interface'
 
 const notificationSchema: Schema<INotification> = new Schema(
   {
-    to: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    message: { type: String, required: true },
-    isViewed: { type: Boolean, default: false },
-    type: { type: String, required: true },
+    to: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    message: {
+      type: String,
+      required: true,
+    },
+    isViewed: {
+      type: Boolean,
+      default: false,
+    },
+    type: {
+      type: String,
+      required: true,
+    },
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
   },
-  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+  { timestamps: true }
 )
 
-export const Notification = mongoose.model<INotification, NotificationModel>(
+export const Notification: Model<INotification> = mongoose.model<INotification>(
   'Notification',
   notificationSchema
 )

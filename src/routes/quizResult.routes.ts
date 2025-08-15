@@ -8,7 +8,9 @@ import {
 
 const router = Router()
 
-router.post('/start', protect, authorizeTypes('student'), startQuiz)
+router.post('/start', protect, 
+  authorizeTypes('student'),
+   startQuiz)
 router.post('/save-progress', protect, saveQuizProgress)
 router.post('/submit', protect, submitQuiz)
 
