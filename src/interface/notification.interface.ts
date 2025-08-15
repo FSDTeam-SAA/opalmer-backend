@@ -1,14 +1,9 @@
-import { Document, Model, Types } from 'mongoose'
+import mongoose, { Document } from 'mongoose'
 
 export interface INotification extends Document {
-  to: Types.ObjectId
+  to: mongoose.Types.ObjectId
   message: string
   isViewed: boolean
   type: string
-  created_at?: Date
-  updated_at?: Date
-}
-
-export interface NotificationModel extends Model<INotification> {
-  markAsViewed(id: string): Promise<INotification | null>
+  id: mongoose.Types.ObjectId
 }
