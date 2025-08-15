@@ -58,13 +58,64 @@ export const startQuiz = catchAsync(async (req, res) => {
 /**********************
  * SAVE QUIZ PROGRESS *
  **********************/
+// export const saveQuizProgress = catchAsync(async (req, res) => {
+//   const { quizId, question, selectedAnswer, remainingTime } = req.body
+//   const studentId = req.user?._id
+
+//   const result = await QuizResult.findOne({ quizId, studentId })
+//   if (!result)
+//     throw new AppError(httpStatus.NOT_FOUND, 'Quiz progress not found')
+
+//   // Update the specific question
+//   const answerIndex = result.answers.findIndex((a) => a.question === question)
+//   if (answerIndex !== -1) {
+//     result.answers[answerIndex].selectedAnswer = selectedAnswer
+//   }
+
+//   // Update progress
+//   result.progress.answeredCount = result.answers.filter(
+//     (a) => a.selectedAnswer
+//   ).length
+//   result.progress.remainingTime = remainingTime
+
+//   await result.save()
+
+//   sendResponse(res, {
+//     success: true,
+//     statusCode: httpStatus.OK,
+//     message: 'Quiz progress saved successfully',
+//     data: result,
+//   })
+// })
+
+/**********************
+ * SAVE QUIZ PROGRESS *
+ **********************/
 export const saveQuizProgress = catchAsync(async (req, res) => {
-  const { quizId, question, selectedAnswer, remainingTime } = req.body
+  const { quizId, question, selectedAnswer } = req.body
   const studentId = req.user?._id
 
   const result = await QuizResult.findOne({ quizId, studentId })
   if (!result)
     throw new AppError(httpStatus.NOT_FOUND, 'Quiz progress not found')
+
+  // Fetch quiz to get total time
+  const quiz = await Quiz.findById(quizId)
+  if (!quiz) throw new AppError(httpStatus.NOT_FOUND, 'Quiz not found')
+
+  // Calculate remaining time
+  const now = new Date()
+  const lastUpdated = result.updatedAt || result.createdAt
+
+  if (!lastUpdated)
+    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Last updated not found')
+
+  const elapsedSeconds = Math.floor(
+    (now.getTime() - lastUpdated.getTime()) / 1000
+  )
+
+
+  const remainingTime = Math.max(quiz.time - elapsedSeconds, 0) // never negative
 
   // Update the specific question
   const answerIndex = result.answers.findIndex((a) => a.question === question)
