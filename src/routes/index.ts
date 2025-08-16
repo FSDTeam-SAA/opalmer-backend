@@ -14,10 +14,11 @@ import messageRouter from './message.route'
 import roomsRouter from './room.route'
 import academicDocumentRouter from './academicDocument.router'
 import { homeworkRouter } from './homeWork.routes'
-import parentRouter from './parent.router'
+// import parentRouter from './parent.router'
 import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
 import quizzesTestRouter from '../routes/quizResult.routes'
+import groupRouter from './group'
 
 
 const router = Router()
@@ -80,10 +81,10 @@ const moduleRoutes = [
     path: '/homework',
     route: homeworkRouter,
   },
-  {
-    path: '/parent',
-    route: parentRouter,
-  },
+  // {
+  //   path: '/parent',
+  //   route: parentRouter,
+  // },
   {
     path: '/quizzes',
     route: quizzesRouter,
@@ -95,7 +96,11 @@ const moduleRoutes = [
   {
     path: '/test/quizzes',
     route: quizzesTestRouter,
-  }
+  },
+  {
+    path: '/group',
+    route: groupRouter,
+  },
 ]
 
 
