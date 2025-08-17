@@ -1,4 +1,3 @@
-
 import { Router } from 'express'
 import userRoutes from '../routes/user.routes'
 import stuAssignToClassRoutes from '../routes/stuAssignToClass.routes'
@@ -14,11 +13,11 @@ import messageRouter from './message.route'
 import roomsRouter from './room.route'
 import academicDocumentRouter from './academicDocument.router'
 import { homeworkRouter } from './homeWork.routes'
-import parentRouter from './parent.router'
+// import parentRouter from './parent.router'
+import parantChildRouter from './parentsChild.route'
 import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
 import quizzesTestRouter from '../routes/quizResult.routes'
-
 
 const router = Router()
 
@@ -81,8 +80,8 @@ const moduleRoutes = [
     route: homeworkRouter,
   },
   {
-    path: '/parent',
-    route: parentRouter,
+    path: '/parent/child',
+    route: parantChildRouter,
   },
   {
     path: '/quizzes',
@@ -95,9 +94,8 @@ const moduleRoutes = [
   {
     path: '/test/quizzes',
     route: quizzesTestRouter,
-  }
+  },
 ]
-
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))
 
