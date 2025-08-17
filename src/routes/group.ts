@@ -9,8 +9,7 @@ import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 const router = express.Router()
 
 // Create a group
-router.post('/groups',protect,
-  authorizeTypes("teacher"), createGroup)
+router.post('/create', createGroup)
 
 // Get group by ID
 router.get('/groups/:id', getGroupById)

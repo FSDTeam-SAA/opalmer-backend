@@ -7,6 +7,7 @@ import mongoose from 'mongoose'
 import { Class } from '../models/class.model'
 import { User } from '../models/user.model'
 import { uploadToCloudinary } from '../utils/cloudinary'
+import { Group } from '../models/group.model'
 
 /*************************
  * CREATE HOMEWORK       *
@@ -24,6 +25,13 @@ export const createHomework = catchAsync(async (req, res) => {
     // ✅ Check if user exists
     const userExists = await User.findById(data.userId)
     if (!userExists) throw new AppError(httpStatus.BAD_REQUEST, 'User not found')
+
+    if (data.groupId) {
+        const groupExists = await Group.findById(data.groupId)
+        if (!groupExists) throw new AppError(httpStatus.BAD_REQUEST, 'Group not found')
+    }
+
+
 
     let files: { public_id: string; url: string }[] = []
 
@@ -172,27 +180,46 @@ export const deleteHomework = catchAsync(async (req, res) => {
  * ARCHIVE HOMEWORK       *
  *************************/
 export const archiveHomework = catchAsync(async (req, res) => {
-  const { id } = req.params
-  const { archived } = req.body // read from request body
+    const { id } = req.params
+    const { archived } = req.body // read from request body
 
-  if (!mongoose.Types.ObjectId.isValid(id))
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid homework ID')
+    if (!mongoose.Types.ObjectId.isValid(id))
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid homework ID')
 
-  if (typeof archived !== 'boolean')
-    throw new AppError(httpStatus.BAD_REQUEST, 'archived must be true or false')
+    if (typeof archived !== 'boolean')
+        throw new AppError(httpStatus.BAD_REQUEST, 'archived must be true or false')
 
-  const updatedHomework = await Homework.findByIdAndUpdate(
-    id,
-    { archived },
-    { new: true }
-  )
+    const updatedHomework = await Homework.findByIdAndUpdate(
+        id,
+        { archived },
+        { new: true }
+    )
 
-  if (!updatedHomework) throw new AppError(httpStatus.NOT_FOUND, 'Homework not found')
+    if (!updatedHomework) throw new AppError(httpStatus.NOT_FOUND, 'Homework not found')
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: `Homework ${archived ? 'archived' : 'unarchived'} successfully`,
-    data: updatedHomework,
-  })
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: `Homework ${archived ? 'archived' : 'unarchived'} successfully`,
+        data: updatedHomework,
+    })
+})
+
+
+export const getHomeworkByGroup = catchAsync(async (req, res) => {
+    const { groupId } = req.params
+
+    if (!mongoose.Types.ObjectId.isValid(groupId))
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid group ID')
+
+    const homework = await Homework.find({ groupId })
+    if (homework.length === 0)
+        throw new AppError(httpStatus.NOT_FOUND, 'No homework found for this group')
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Homework for group fetched successfully',
+        data: homework,
+    })
 })

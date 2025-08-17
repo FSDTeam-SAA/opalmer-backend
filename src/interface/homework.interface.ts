@@ -3,6 +3,7 @@ import { Document, Model, Types } from 'mongoose'
 export interface IHomework extends Document {
   classId: Types.ObjectId
   userId: Types.ObjectId
+  groupId: Types.ObjectId
   title: string
   file: string[] 
   archived: boolean
