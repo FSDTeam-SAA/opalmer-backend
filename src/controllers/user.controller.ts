@@ -20,6 +20,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     email,
     role,
     schoolId,
+    gender
   } = req.body;
 
   // Validate required fields
@@ -70,6 +71,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     email,
     role,
     schoolId,
+    gender
   });
 
   res.status(201).json({

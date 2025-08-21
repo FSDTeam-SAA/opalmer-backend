@@ -26,6 +26,7 @@ export interface IUser extends Document {
   created_at?: Date
   updated_at?: Date
   schoolId: Types.ObjectId
+  gender: 'male' | 'female'| 'other'
 }
 
 // Static methods interface
