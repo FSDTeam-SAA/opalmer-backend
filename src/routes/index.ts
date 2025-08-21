@@ -17,6 +17,7 @@ import parantChildRouter from './parentsChild.route'
 import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
 import quizzesTestRouter from '../routes/quizResult.routes'
+import dashboardRouter from './adminDashboard.router'
 
 const router = Router()
 
@@ -94,6 +95,10 @@ const moduleRoutes = [
     path: '/test/quizzes',
     route: quizzesTestRouter,
   },
+  {
+    path: '/dashboard',
+    route: dashboardRouter,
+  }
 ]
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))
