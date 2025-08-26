@@ -3,6 +3,7 @@ import {
   getAllAdministrators,
   loginUser,
   registerUser,
+  updateUser,
 } from '../controllers/user.controller'
 import { upload } from '../middlewares/multer.middleware'
 import { authorizeTypes, protect } from '../middlewares/auth.middleware'
@@ -17,5 +18,9 @@ router.get(
   authorizeTypes('administrator'),
   getAllAdministrators
 )
+
+router.put('/:id', 
+    // protect,
+     updateUser)
 
 export default router
