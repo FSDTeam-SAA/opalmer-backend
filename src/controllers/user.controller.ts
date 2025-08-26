@@ -47,11 +47,6 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(409, 'Username already exists')
   }
 
-  const isSchoolExists = await school.findById(schoolId);
-  if (!isSchoolExists) {
-    throw new AppError(400, "School not found");
-  }
-
   // Handle image upload
   let avatar = { public_id: '', url: '' }
   if (req.file) {
@@ -65,8 +60,18 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
   }
 
   // Check if user is a student or teacher and schoolId is missing
-  if ((type === 'student' || type === 'teacher') && !schoolId) {
-    throw new AppError(400, `School ID is required for ${type} registration.`)
+  if (type === "student" || role === "teacher") {
+    if (!schoolId) {
+      throw new AppError(
+        400,
+        `School ID is required for ${type} registration.`
+      );
+    }
+
+    const isSchoolExists = await school.findById(schoolId);
+    if (!isSchoolExists) {
+      throw new AppError(400, "School not found");
+    }
   }
 
   // Create user
