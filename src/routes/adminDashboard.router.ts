@@ -9,7 +9,7 @@ const router = Router()
 
 router.get('/stats', protect, getUserStats)
 router.get('/stats/student-gender',
-    //  protect,
+     protect,
       getStudentGenderStats)
 
 export default router
