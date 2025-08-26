@@ -1,9 +1,11 @@
-import { Request, Response } from 'express'
-import { User } from '../models/user.model'
-import AppError from '../errors/AppError'
-import catchAsync from '../utils/catchAsync'
-import { uploadToCloudinary } from '../utils/cloudinary'
-import jwt from 'jsonwebtoken'
+
+import { Request, Response } from "express";
+import { User } from "../models/user.model";
+import AppError from "../errors/AppError";
+import catchAsync from "../utils/catchAsync";
+import { uploadToCloudinary } from "../utils/cloudinary";
+import jwt from "jsonwebtoken";
+import school from "../models/school.model";
 import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
 
@@ -23,7 +25,9 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     role,
     schoolId,
     gender,
-  } = req.body
+
+  } = req.body;
+
 
   // Validate required fields
   if (!username || !Id || !age || !password) {
@@ -41,6 +45,11 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
   const existingUser = await User.findOne({ username })
   if (existingUser) {
     throw new AppError(409, 'Username already exists')
+  }
+
+  const isSchoolExists = await school.findById(schoolId);
+  if (!isSchoolExists) {
+    throw new AppError(400, "School not found");
   }
 
   // Handle image upload
@@ -75,6 +84,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     schoolId,
     gender,
   })
+
 
   res.status(201).json({
     success: true,
