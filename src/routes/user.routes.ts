@@ -6,21 +6,23 @@ import {
   updateUser,
 } from '../controllers/user.controller'
 import { upload } from '../middlewares/multer.middleware'
-import { authorizeTypes, protect } from '../middlewares/auth.middleware'
+import { authorizeRoles, protect } from '../middlewares/auth.middleware'
 const router = express.Router()
 
-router.post("/register", upload.single("image"), registerUser);
-router.post("/login", loginUser);
+router.post('/register', upload.single('image'), registerUser)
+router.post('/login', loginUser)
 
 router.get(
   '/administrators',
   protect,
-  authorizeTypes('administrator'),
+  authorizeRoles('administrator'),
   getAllAdministrators
 )
 
-router.put('/:id', 
-    // protect,
-     updateUser)
+router.put(
+  '/:id',
+  protect,
+  updateUser
+)
 
 export default router
