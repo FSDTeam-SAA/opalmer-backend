@@ -2,14 +2,18 @@ import express from "express";
 import {
   getAllAdministrators,
   getMySchoolAllStudents,
+  getMySchoolAllTeachers,
   loginUser,
   registerUser,
-  updateUser
+  updateUser,
 } from "../controllers/user.controller";
 import { upload } from "../middlewares/multer.middleware";
-import { authorizeRoles, authorizeTypes, protect } from "../middlewares/auth.middleware";
+import {
+  authorizeRoles,
+  authorizeTypes,
+  protect,
+} from "../middlewares/auth.middleware";
 const router = express.Router();
-
 
 router.post("/register", upload.single("image"), registerUser);
 router.post("/login", loginUser);
@@ -21,7 +25,6 @@ router.get(
   getAllAdministrators
 );
 
-
 router.get(
   "/my-students",
   protect,
@@ -29,10 +32,17 @@ router.get(
   getMySchoolAllStudents
 );
 
+router.get(
+  "/my-teachers",
+  protect,
+  authorizeRoles("administrator"),
+  getMySchoolAllTeachers
+);
 
-router.put('/:id', 
-    // protect,
-     updateUser)
+router.put(
+  "/:id",
+  // protect,
+  updateUser
+);
 
-export default router
-
+export default router;
