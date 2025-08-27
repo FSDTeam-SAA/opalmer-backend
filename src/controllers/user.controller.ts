@@ -69,7 +69,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
       throw new AppError(400, "School not found");
     }
   }
-  
+
   // Create user
   const user = await User.create({
     username,
@@ -103,7 +103,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
 
 /**************
  * LOGIN USER *
-**************/
+ **************/
 export const loginUser = catchAsync(async (req: Request, res: Response) => {
   const { Id, password } = req.body;
 
@@ -118,7 +118,7 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(401, "Invalid Id or password.");
   }
   if (user.isActive === false) {
-    throw new AppError(401, 'Your account has been Deactivated.')
+    throw new AppError(401, "Your account has been Deactivated.");
   }
 
   // Compare password
@@ -200,39 +200,67 @@ export const getMySchoolAllStudents = catchAsync(
   }
 );
 
+export const getMySchoolAllTeachers = catchAsync(
+  async (req: Request, res: Response) => {
+    const { _id: userId } = req.user as { _id: string; userId?: string };
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError(404, "User not found");
+    }
+
+    const shoolExists = await school
+      .find({ administrator: user._id })
+      .select("_id");
+    if (!shoolExists) {
+      throw new AppError(404, "School not found");
+    }
+
+    const teachers = await User.find({
+      schoolId: { $in: shoolExists.map((s) => s._id) },
+      type: "teacher",
+    }).select("username Id phoneNumber gradeLevel age");
+
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Teachers fetched successfully",
+      data: teachers,
+    });
+  }
+);
 
 // Update user info
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params
-  const updateData = req.body
+  const { id } = req.params;
+  const updateData = req.body;
 
   // Disallow updating restricted fields
   const restrictedFields = [
-    'password',
-    'role',
-    'refreshToken',
-    'verificationInfo',
-  ]
-  restrictedFields.forEach((field) => delete updateData[field])
+    "password",
+    "role",
+    "refreshToken",
+    "verificationInfo",
+  ];
+  restrictedFields.forEach((field) => delete updateData[field]);
 
   const user = await User.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
-  }).select('-password -refreshToken')
+  }).select("-password -refreshToken");
 
   if (!user) {
     return sendResponse(res, {
       statusCode: httpStatus.NOT_FOUND,
       success: false,
-      message: 'User not found',
-    })
+      message: "User not found",
+    });
   }
 
   return sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'User updated successfully',
+    message: "User updated successfully",
     data: user,
-  })
-})
-
+  });
+});
