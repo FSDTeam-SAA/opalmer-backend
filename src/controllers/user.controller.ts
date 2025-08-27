@@ -55,7 +55,6 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
       };
     }
   }
-
   // Check if user is a student or teacher and schoolId is missing
   if (type === "student" || role === "teacher") {
     if (!schoolId) {
@@ -70,7 +69,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
       throw new AppError(400, "School not found");
     }
   }
-
+  
   // Create user
   const user = await User.create({
     username,
@@ -104,7 +103,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
 
 /**************
  * LOGIN USER *
- **************/
+**************/
 export const loginUser = catchAsync(async (req: Request, res: Response) => {
   const { Id, password } = req.body;
 
@@ -117,6 +116,9 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
   const user = await User.findOne({ Id }).select("+password");
   if (!user) {
     throw new AppError(401, "Invalid Id or password.");
+  }
+  if (user.isActive === false) {
+    throw new AppError(401, 'Your account has been Deactivated.')
   }
 
   // Compare password
@@ -197,3 +199,40 @@ export const getMySchoolAllStudents = catchAsync(
     });
   }
 );
+
+
+// Update user info
+export const updateUser = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params
+  const updateData = req.body
+
+  // Disallow updating restricted fields
+  const restrictedFields = [
+    'password',
+    'role',
+    'refreshToken',
+    'verificationInfo',
+  ]
+  restrictedFields.forEach((field) => delete updateData[field])
+
+  const user = await User.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
+  }).select('-password -refreshToken')
+
+  if (!user) {
+    return sendResponse(res, {
+      statusCode: httpStatus.NOT_FOUND,
+      success: false,
+      message: 'User not found',
+    })
+  }
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User updated successfully',
+    data: user,
+  })
+})
+

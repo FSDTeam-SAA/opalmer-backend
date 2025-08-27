@@ -4,9 +4,9 @@ import { IUser, UserModel } from '../interface/user.interface'
 
 const userSchema: Schema = new Schema<IUser>(
   {
-    username: { type: String, required: true, unique: true },
-    phoneNumber: { type: String, unique: true },
-    email: { type: String, unique: true },
+    username: { type: String, required: true },
+    phoneNumber: { type: String },
+    email: { type: String },
     role: {
       type: String,
       enum: ['user', 'admin', 'administrator'],
@@ -41,6 +41,7 @@ const userSchema: Schema = new Schema<IUser>(
     fine: { type: Number },
     schoolId: { type: Schema.Types.ObjectId, ref: 'School', default: null },
     gender: { type: String, enum: ['male', 'female', 'other'] },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
