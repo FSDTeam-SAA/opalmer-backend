@@ -19,6 +19,7 @@ import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
 import quizzesTestRouter from '../routes/quizResult.routes'
 import groupRouter from './group'
+import ocrRoutes from './ocr.routes'
 
 
 const router = Router()
@@ -100,6 +101,10 @@ const moduleRoutes = [
   {
     path: '/group',
     route: groupRouter,
+  },
+  {
+    path: '/marks',
+    route: ocrRoutes,
   },
 ]
 
