@@ -1,21 +1,29 @@
-import express from 'express'
+import express from "express";
 import {
   getAllAdministrators,
+  getMySchoolAllStudents,
   loginUser,
   registerUser,
-} from '../controllers/user.controller'
-import { upload } from '../middlewares/multer.middleware'
-import { authorizeTypes, protect } from '../middlewares/auth.middleware'
-const router = express.Router()
+} from "../controllers/user.controller";
+import { upload } from "../middlewares/multer.middleware";
+import { authorizeRoles, authorizeTypes, protect } from "../middlewares/auth.middleware";
+const router = express.Router();
 
 router.post("/register", upload.single("image"), registerUser);
 router.post("/login", loginUser);
 
 router.get(
-  '/administrators',
+  "/administrators",
   protect,
-  authorizeTypes('administrator'),
+  authorizeTypes("administrator"),
   getAllAdministrators
-)
+);
 
-export default router
+router.get(
+  "/my-students",
+  protect,
+  authorizeRoles("administrator"),
+  getMySchoolAllStudents
+);
+
+export default router;

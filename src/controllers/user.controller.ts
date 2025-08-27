@@ -1,4 +1,3 @@
-
 import { Request, Response } from "express";
 import { User } from "../models/user.model";
 import AppError from "../errors/AppError";
@@ -6,8 +5,8 @@ import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import jwt from "jsonwebtoken";
 import school from "../models/school.model";
-import sendResponse from '../utils/sendResponse'
-import httpStatus from 'http-status'
+import sendResponse from "../utils/sendResponse";
+import httpStatus from "http-status";
 
 /*****************
  * REGISTER USER *
@@ -25,37 +24,35 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     role,
     schoolId,
     gender,
-
   } = req.body;
-
 
   // Validate required fields
   if (!username || !Id || !age || !password) {
     throw new AppError(
       400,
-      'All fields (username, Id, age, state, password) are required.'
-    )
+      "All fields (username, Id, age, state, password) are required."
+    );
   }
 
-  if (role === 'admin') {
-    throw new AppError(400, 'You cannot register as an admin.')
+  if (role === "admin") {
+    throw new AppError(400, "You cannot register as an admin.");
   }
 
   // Check if username already exists
-  const existingUser = await User.findOne({ username })
+  const existingUser = await User.findOne({ username });
   if (existingUser) {
-    throw new AppError(409, 'Username already exists')
+    throw new AppError(409, "Username already exists");
   }
 
   // Handle image upload
-  let avatar = { public_id: '', url: '' }
+  let avatar = { public_id: "", url: "" };
   if (req.file) {
-    const uploadResult = await uploadToCloudinary(req.file.path)
+    const uploadResult = await uploadToCloudinary(req.file.path);
     if (uploadResult) {
       avatar = {
         public_id: uploadResult.public_id,
         url: uploadResult.secure_url,
-      }
+      };
     }
   }
 
@@ -88,12 +85,11 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     role,
     schoolId,
     gender,
-  })
-
+  });
 
   res.status(201).json({
     success: true,
-    message: 'User registered successfully',
+    message: "User registered successfully",
     data: {
       id: user._id,
       schoolId: user.schoolId,
@@ -103,45 +99,45 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
       avatar: user.avatar,
       created_at: user.created_at,
     },
-  })
-})
+  });
+});
 
 /**************
  * LOGIN USER *
  **************/
 export const loginUser = catchAsync(async (req: Request, res: Response) => {
-  const { Id, password } = req.body
+  const { Id, password } = req.body;
 
   // Validate input
   if (!Id || !password) {
-    throw new AppError(400, 'Id and password are required.')
+    throw new AppError(400, "Id and password are required.");
   }
 
   // Find user by Id
-  const user = await User.findOne({ Id }).select('+password')
+  const user = await User.findOne({ Id }).select("+password");
   if (!user) {
-    throw new AppError(401, 'Invalid Id or password.')
+    throw new AppError(401, "Invalid Id or password.");
   }
 
   // Compare password
   const isPasswordMatched = await User.isPasswordMatched(
     password,
     user.password
-  )
+  );
   if (!isPasswordMatched) {
-    throw new AppError(401, 'Invalid Id or password.')
+    throw new AppError(401, "Invalid Id or password.");
   }
 
   // Generate JWT token
   const token = jwt.sign(
     { userId: user._id, role: user.role, type: user.type, Id: user.Id },
-    process.env.JWT_SECRET || 'default_secret',
-    { expiresIn: '7d' }
-  )
+    process.env.JWT_SECRET || "default_secret",
+    { expiresIn: "7d" }
+  );
 
   res.status(200).json({
     success: true,
-    message: 'Login successful',
+    message: "Login successful",
     data: {
       token,
       user: {
@@ -153,21 +149,51 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
         avatar: user.avatar,
       },
     },
-  })
-})
+  });
+});
 
 // Get all administrators
 export const getAllAdministrators = catchAsync(
   async (_req: Request, res: Response) => {
-    const admins = await User.find({ role: 'administrator' }).select(
-      'username email phoneNumber type state avatar created_at'
-    )
+    const admins = await User.find({ role: "administrator" }).select(
+      "username email phoneNumber type state avatar created_at"
+    );
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
-      message: 'Administrators fetched successfully',
+      message: "Administrators fetched successfully",
       data: admins,
-    })
+    });
   }
-)
+);
+
+export const getMySchoolAllStudents = catchAsync(
+  async (req: Request, res: Response) => {
+    const { _id: userId } = req.user as { _id: string; userId?: string };
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError(404, "User not found");
+    }
+
+    const shoolExists = await school
+      .find({ administrator: user._id })
+      .select("_id");
+    if (!shoolExists) {
+      throw new AppError(404, "School not found");
+    }
+
+    const students = await User.find({
+      schoolId: { $in: shoolExists.map((s) => s._id) },
+      type: "student",
+    }).select("username Id phoneNumber gradeLevel age");
+
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Students fetched successfully",
+      data: students,
+    });
+  }
+);
