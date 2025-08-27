@@ -6,6 +6,7 @@ import {
   updateClass,
   deleteClass,
   getgradeWiseClasses,
+  getClassesByStudent,
 } from '../controllers/class.controller'
 import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 
@@ -26,5 +27,9 @@ router.get(
   authorizeTypes('student'),
   getgradeWiseClasses
 ) 
+
+// Get classes by student ID
+router.get('/student/:studentId', protect, getClassesByStudent)
+
 
 export default router

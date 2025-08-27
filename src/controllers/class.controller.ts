@@ -139,3 +139,34 @@ export const deleteClass = catchAsync(async (req, res) => {
     data: null,
   })
 })
+
+
+/*********************************
+ * GET CLASSES BY STUDENT ID *
+ *********************************/
+export const getClassesByStudent = catchAsync(async (req, res) => {
+  const { studentId } = req.params
+
+  // Find student and get their grade
+  const student = await User.findById(studentId).select('gradeLevel username email')
+
+  if (!student) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Student not found')
+  }
+
+  // Get classes matching student's grade
+  const classes = await Class.find({ grade: student.gradeLevel }).populate(
+    'teacherId',
+    'username email'
+  )
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Classes for student ${student.username} fetched successfully`,
+    data: {
+      student,
+      classes,
+    },
+  })
+})
