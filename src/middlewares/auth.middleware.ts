@@ -62,7 +62,6 @@ export const authorizeTypes = (...types: string[]) => {
     if (!req.user) {
       throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
     }
-    console.log(1, req.user);
 
     const userTypes = req.user.type;
     const hasType = types.includes(userTypes);
