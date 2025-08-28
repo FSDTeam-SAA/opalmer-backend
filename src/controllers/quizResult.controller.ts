@@ -184,3 +184,26 @@ export const submitQuiz = catchAsync(async (req, res) => {
     },
   })
 })
+
+
+/**********************
+ * GET QUIZZES ANSWERS BY STUDENT
+ **********************/
+export const getQuizAnswersByStudent = catchAsync(async (req, res) => {
+  const { studentId } = req.params
+
+  const results = await QuizResult.find({ studentId })
+    .populate('quizId', 'title classId time') // populate quiz info (optional)
+    .sort({ createdAt: -1 })
+
+  if (!results || results.length === 0) {
+    throw new AppError(httpStatus.NOT_FOUND, 'No quiz answers found for this student')
+  }
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Quiz answers fetched successfully',
+    data: results,
+  })
+})
