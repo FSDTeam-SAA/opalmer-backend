@@ -3,6 +3,7 @@ import { Document, Model, Types } from "mongoose";
 export interface ILesson extends Document {
   studentId: Types.ObjectId;
   teacherId: Types.ObjectId;
+  classId: Types.ObjectId;
   objective: string;
   note: string;
   document: string;
