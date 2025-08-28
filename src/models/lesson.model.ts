@@ -12,7 +12,9 @@ const lessonSchema: Schema<ILesson> = new Schema(
       public_id: { type: String, default: "" },
       url: { type: String, default: "" },
     },
+    isArchived: { type: Boolean, default: false },
   },
+
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
     versionKey: false,

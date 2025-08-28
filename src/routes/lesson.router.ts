@@ -65,5 +65,16 @@ router.delete(
   lessonController.deleteLesson
 );
 
+
+router.put(
+  "/update-status/:lessonId",
+  protect,
+  authorizeTypes("teacher"),
+  lessonController.updateLessonStatus
+)
+
+
+
+
 const lessonRouter = router;
 export default lessonRouter;

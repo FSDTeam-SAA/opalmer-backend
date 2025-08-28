@@ -296,6 +296,39 @@ const getLessonsByClass = catchAsync(async (req, res) => {
 });
 
 
+const updateLessonStatus = catchAsync(async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      throw new AppError(400, "Lesson not found");
+    }
+
+    const updatedLesson = await Lesson.findByIdAndUpdate(
+      lessonId,
+      [
+        {
+          $set: {
+            isArchived: { $not: ["$isArchived"] },
+          },
+        },
+      ],
+      { new: true }
+    );
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: `Lesson status updated to ${updatedLesson!.isArchived ? "archived" : "active"}`,
+      data: updatedLesson,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+
 
 const lessonController = {
   createLesson,
@@ -305,6 +338,8 @@ const lessonController = {
   getSingleLesson,
   updateLesson,
   deleteLesson,
+  getLessonsByClass,
+  updateLessonStatus
   getLessonsByClass
 };
 

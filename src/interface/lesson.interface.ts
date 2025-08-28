@@ -7,6 +7,7 @@ export interface ILesson extends Document {
   objective: string;
   note: string;
   document: string;
+  isArchived: boolean;
 }
 
 export interface LessonModel extends Model<ILesson> {
