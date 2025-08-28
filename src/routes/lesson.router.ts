@@ -43,6 +43,13 @@ router.get(
   lessonController.getSingleLesson
 );
 
+router.get(
+  "/class/:classId",
+  protect,
+  authorizeTypes("teacher"),
+  lessonController.getLessonsByClass
+)
+
 router.put(
   "/update/:lessonId",
   protect,

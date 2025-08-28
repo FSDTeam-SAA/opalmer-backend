@@ -16,3 +16,4 @@ export const StuAssignToClass = mongoose.model<
   IStuAssignToClass,
   StuAssignToClassModel
 >('StuAssignToClass', stuAssignToClassSchema)
+

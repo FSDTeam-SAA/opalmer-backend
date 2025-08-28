@@ -1,14 +1,17 @@
 import AppError from "../errors/AppError";
+import { Class } from "../models/class.model";
 import { Lesson } from "../models/lesson.model";
+import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
 
+
 const createLesson = catchAsync(async (req, res) => {
   try {
     const { _id: userId } = req.user as any;
-    const { studentId } = req.body;
+    const { studentId, classId } = req.body;
 
     const teacher = await User.findById(userId);
     if (!teacher) {
@@ -18,6 +21,11 @@ const createLesson = catchAsync(async (req, res) => {
     const student = await User.findById(studentId);
     if (!student) {
       throw new AppError(400, "Student not found");
+    }
+
+    const isClassExist = await Class.findById(classId);
+    if (!isClassExist) {
+      throw new AppError(400, "Class not found");
     }
 
     let document = { public_id: "", url: "" };
@@ -38,6 +46,7 @@ const createLesson = catchAsync(async (req, res) => {
       ...req.body,
       teacherId: userId,
       studentId,
+      classId,
       document,
     });
 
@@ -69,6 +78,10 @@ const getLessonsByTeacher = catchAsync(async (req, res) => {
       .populate({
         path: "teacherId",
         select: "username email role type",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
       });
 
     return sendResponse(res, {
@@ -99,6 +112,10 @@ const getLessonsByStudent = catchAsync(async (req, res) => {
       .populate({
         path: "teacherId",
         select: "username email role type",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
       });
 
     return sendResponse(res, {
@@ -122,6 +139,10 @@ const getAllLessons = catchAsync(async (req, res) => {
       .populate({
         path: "teacherId",
         select: "username email role type",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
       });
 
     return sendResponse(res, {
@@ -147,6 +168,10 @@ const getSingleLesson = catchAsync(async (req, res) => {
       .populate({
         path: "teacherId",
         select: "username email role type",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
       });
 
     return sendResponse(res, {
@@ -163,7 +188,7 @@ const getSingleLesson = catchAsync(async (req, res) => {
 const updateLesson = catchAsync(async (req, res) => {
   try {
     const { lessonId } = req.params;
-    const { studentId, objective, note } = req.body;
+    const { studentId, objective, note, classId } = req.body;
 
     const lesson = await Lesson.findById(lessonId);
     if (!lesson) {
@@ -173,6 +198,11 @@ const updateLesson = catchAsync(async (req, res) => {
     const student = await User.findById(studentId);
     if (!student) {
       throw new AppError(400, "Student not found");
+    }
+
+    const isExistingClass = await Class.findById(classId);
+    if (!isExistingClass) {
+      throw new AppError(400, "Class not found");
     }
 
     let document = { public_id: "", url: "" };
@@ -194,6 +224,7 @@ const updateLesson = catchAsync(async (req, res) => {
         objective,
         note,
         document,
+        classId
       },
       { new: true }
     );
@@ -234,6 +265,38 @@ const deleteLesson = catchAsync(async (req, res) => {
   }
 });
 
+
+const getLessonsByClass = catchAsync(async (req, res) => {
+  try {
+    const { classId } = req.params;
+
+    const result = await Lesson.find({ classId })
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Class Lessons fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+
+
 const lessonController = {
   createLesson,
   getLessonsByTeacher,
@@ -242,6 +305,7 @@ const lessonController = {
   getSingleLesson,
   updateLesson,
   deleteLesson,
+  getLessonsByClass
 };
 
 export default lessonController;

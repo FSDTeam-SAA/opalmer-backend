@@ -5,6 +5,7 @@ const lessonSchema: Schema<ILesson> = new Schema(
   {
     studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     teacherId: { type: Schema.Types.ObjectId, ref: "User" },
+    classId: { type: Schema.Types.ObjectId, ref: "Class" },
     objective: { type: String, required: true },
     note: { type: String, required: true },
     document: {
