@@ -90,3 +90,18 @@ export const deleteQuiz = catchAsync(async (req: Request, res: Response) => {
     message: 'Quiz deleted successfully',
   })
 })
+
+
+// Get quizzes by teacherId
+export const getQuizzesByTeacher = catchAsync(
+  async (req: Request, res: Response) => {
+    const { teacherId } = req.params
+
+    const quizzes = await Quiz.find({ teacherId }).sort({ created_at: -1 })
+
+    res.status(200).json({
+      success: true,
+      data: quizzes,
+    })
+  }
+)

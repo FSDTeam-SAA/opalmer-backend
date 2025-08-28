@@ -5,6 +5,7 @@ import {
   getAllQuizzes,
   getQuizzesByClass,
   deleteQuiz,
+  getQuizzesByTeacher,
 } from '../controllers/quiz.controller'
 import { upload } from '../middlewares/multer.middleware'
 
@@ -15,6 +16,7 @@ router.put('/:quizId', upload.single('image'), updateQuiz)
 router.get('/', getAllQuizzes)
 // Get quizzes by classId
 router.get('/class/:classId', getQuizzesByClass)
+router.get('/teacher/:teacherId', getQuizzesByTeacher)
 router.delete('/:quizId', deleteQuiz)
 
 export default router
