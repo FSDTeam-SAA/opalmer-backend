@@ -265,6 +265,7 @@ const deleteLesson = catchAsync(async (req, res) => {
   }
 });
 
+
 const getLessonsByClass = catchAsync(async (req, res) => {
   try {
     const { classId } = req.params;
@@ -293,6 +294,7 @@ const getLessonsByClass = catchAsync(async (req, res) => {
     throw new AppError(500, error as string);
   }
 });
+
 
 const updateLessonStatus = catchAsync(async (req, res) => {
   try {
@@ -327,6 +329,7 @@ const updateLessonStatus = catchAsync(async (req, res) => {
 });
 
 
+
 const lessonController = {
   createLesson,
   getLessonsByTeacher,
@@ -337,6 +340,7 @@ const lessonController = {
   deleteLesson,
   getLessonsByClass,
   updateLessonStatus
+  getLessonsByClass
 };
 
 export default lessonController;
