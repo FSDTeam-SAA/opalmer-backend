@@ -36,6 +36,14 @@ router.get(
 );
 
 router.get(
+  "/archived",
+  protect,
+  authorizeTypes("teacher"),
+  lessonController.getArchivedLessons
+)
+
+
+router.get(
   "/:lessonId",
   protect,
   // authorizeTypes("student"),
@@ -72,9 +80,6 @@ router.put(
   authorizeTypes("teacher"),
   lessonController.updateLessonStatus
 )
-
-
-
 
 const lessonRouter = router;
 export default lessonRouter;
