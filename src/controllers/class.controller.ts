@@ -106,7 +106,7 @@ export const getgradeWiseClasses = catchAsync(async (req, res) => {
   }
   const grade = student.gradeLevel
 
-  console.log(11,grade)
+  console.log(11, grade)
 
   const classes = await Class.find({ grade }).populate(
     'teacherId',
@@ -140,7 +140,6 @@ export const deleteClass = catchAsync(async (req, res) => {
   })
 })
 
-
 /*********************************
  * GET CLASSES BY STUDENT ID *
  *********************************/
@@ -148,7 +147,9 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
   const { studentId } = req.params
 
   // Find student and get their grade
-  const student = await User.findById(studentId).select('gradeLevel username email')
+  const student = await User.findById(studentId).select(
+    'gradeLevel username email'
+  )
 
   if (!student) {
     throw new AppError(httpStatus.NOT_FOUND, 'Student not found')

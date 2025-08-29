@@ -15,8 +15,8 @@ import {
 } from "../middlewares/auth.middleware";
 const router = express.Router();
 
-router.post("/register", upload.single("image"), registerUser);
-router.post("/login", loginUser);
+router.post('/register', upload.single('image'), registerUser)
+router.post('/login', loginUser)
 
 router.get(
   "/administrators",
