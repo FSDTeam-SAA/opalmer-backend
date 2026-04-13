@@ -8,8 +8,11 @@ app.use(express.json())
 
 app.use(express.static('public'))
 
-app.get('/', (_req, res) => {
-  res.json({ success: true, message: 'Opalmer API is running' })
+// app.get('/', (_req, res) => {
+//   res.json({ success: true, message: 'Opalmer API is running' })
+// })
+app.get('/health', (_req, res) => {
+    res.json({ success: true, message: 'Opalmer API is running', uptime: process.uptime() })
 })
 
 app.use('/api/v1', router)
