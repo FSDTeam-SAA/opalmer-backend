@@ -25,8 +25,6 @@ const setErrorDetails = (simplifiedError) => {
     };
 };
 // 14-2,3
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
 const globalErrorHandler = (err, req, res, 
 // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
 next) => {
