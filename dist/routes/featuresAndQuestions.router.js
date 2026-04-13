@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.featuresAndQuestionsRouter = void 0;
+const express_1 = require("express");
+const featuresAndQuestions_controller_1 = require("../controllers/featuresAndQuestions.controller");
+const router = (0, express_1.Router)();
+router.post("/create", featuresAndQuestions_controller_1.featuresAndQuestionsController.crateFeaturesAndQuestions);
+router.get("/AppFeatures", featuresAndQuestions_controller_1.featuresAndQuestionsController.getAppFeatures);
+router.get("/FAQquestions", featuresAndQuestions_controller_1.featuresAndQuestionsController.getFAQquestions);
+router.put("/update/:id", featuresAndQuestions_controller_1.featuresAndQuestionsController.updateFeaturesAndQuestions);
+exports.featuresAndQuestionsRouter = router;
