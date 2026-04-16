@@ -10,6 +10,7 @@ import behaviorRouter from './behavior.router'
 import schoolRouter from './school.router'
 import learningTipsRouters from './learningTip.routes'
 import messageRouter from './message.route'
+import notificationRouter from './notification.route'
 import roomsRouter from './room.route'
 import academicDocumentRouter from './academicDocument.router'
 import { homeworkRouter } from './homeWork.routes'
@@ -67,6 +68,10 @@ const moduleRoutes = [
     route: messageRouter,
   },
   {
+    path: '/notifications',
+    route: notificationRouter,
+  },
+  {
     path: '/rooms',
     route: roomsRouter,
   },
@@ -98,7 +103,7 @@ const moduleRoutes = [
   {
     path: '/dashboard',
     route: dashboardRouter,
-  }
+  },
 ]
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))

@@ -20,8 +20,6 @@ router.post('/login', loginUser)
 
 router.get(
   "/administrators",
-  protect,
-  authorizeTypes("administrator"),
   getAllAdministrators
 );
 
