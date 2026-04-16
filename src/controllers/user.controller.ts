@@ -27,7 +27,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
   } = req.body;
 
   // Validate required fields
-  if (!username || !Id || !age || !password) {
+  if (!username || !Id  || !password) {
     throw new AppError(
       400,
       "All fields (username, Id, age, state, password) are required."
