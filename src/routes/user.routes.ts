@@ -46,6 +46,7 @@ router.get(
 router.put(
   "/:id",
   // protect,
+  upload.single("image"),
   updateUser
 );
 

@@ -255,7 +255,7 @@ export const getMySchoolAllTeachers = catchAsync(
 // Update user info
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const updateData = req.body;
+  const updateData: Record<string, any> = { ...req.body };
 
   // Disallow updating restricted fields
   const restrictedFields = [
@@ -265,6 +265,17 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     "verificationInfo",
   ];
   restrictedFields.forEach((field) => delete updateData[field]);
+
+  // If a new avatar image is uploaded, push it to Cloudinary and merge into avatar
+  if (req.file) {
+    const uploadResult = await uploadToCloudinary(req.file.path);
+    if (uploadResult) {
+      updateData.avatar = {
+        public_id: uploadResult.public_id,
+        url: uploadResult.secure_url,
+      };
+    }
+  }
 
   const user = await User.findByIdAndUpdate(id, updateData, {
     new: true,
