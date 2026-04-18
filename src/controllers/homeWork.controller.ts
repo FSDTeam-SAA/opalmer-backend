@@ -75,13 +75,16 @@ export const getHomeworkById = catchAsync(async (req, res) => {
  *************************/
 export const getHomeworkByClass = catchAsync(async (req, res) => {
     const { classId } = req.params
+    const { archived } = req.query
 
     if (!mongoose.Types.ObjectId.isValid(classId))
         throw new AppError(httpStatus.BAD_REQUEST, 'Invalid class ID')
 
-    const homework = await Homework.findByClass(classId)
-    if (homework.length === 0)
-        throw new AppError(httpStatus.NOT_FOUND, 'No homework found for this class')
+    const filter: Record<string, any> = { classId }
+    if (archived === 'true') filter.archived = true
+    else if (archived === 'false') filter.archived = false
+
+    const homework = await Homework.find(filter).sort({ created_at: -1 })
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

@@ -14,6 +14,7 @@ import notificationRouter from './notification.route'
 import roomsRouter from './room.route'
 import academicDocumentRouter from './academicDocument.router'
 import { homeworkRouter } from './homeWork.routes'
+import { groupWorkRouter } from './groupWork.routes'
 import parantChildRouter from './parentsChild.route'
 import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
@@ -83,6 +84,10 @@ const moduleRoutes = [
   {
     path: '/homework',
     route: homeworkRouter,
+  },
+  {
+    path: '/group-work',
+    route: groupWorkRouter,
   },
   {
     path: '/parent/child',

@@ -2,9 +2,11 @@ import { Document, Model, Types } from 'mongoose'
 
 export interface IGroupWork extends Document {
   classId: Types.ObjectId
-  userId: Types.ObjectId[] 
+  userId: Types.ObjectId[]
   title: string
-  file: string[] 
+  description?: string
+  dueDate?: Date
+  file: string[]
   archived: boolean
   created_at?: Date
   updated_at?: Date

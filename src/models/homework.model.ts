@@ -6,6 +6,8 @@ const homeworkSchema: Schema<IHomework> = new Schema(
     classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
+    description: { type: String },
+    dueDate: { type: Date },
       file: {
       type: [
         {

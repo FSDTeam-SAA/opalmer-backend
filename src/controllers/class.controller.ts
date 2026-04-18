@@ -4,6 +4,9 @@ import AppError from '../errors/AppError'
 import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
 import { User } from '../models/user.model'
+import { Attendance } from '../models/attendance.model'
+import { Quiz } from '../models/quiz.model'
+import { QuizResult } from '../models/quizResult.model'
 
 /******************
  * CREATE CLASS *
@@ -143,10 +146,11 @@ export const deleteClass = catchAsync(async (req, res) => {
 /*********************************
  * GET CLASSES BY STUDENT ID *
  *********************************/
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
 export const getClassesByStudent = catchAsync(async (req, res) => {
   const { studentId } = req.params
 
-  // Find student and get their grade
   const student = await User.findById(studentId).select(
     'gradeLevel username email'
   )
@@ -155,10 +159,105 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
     throw new AppError(httpStatus.NOT_FOUND, 'Student not found')
   }
 
-  // Get classes matching student's grade
-  const classes = await Class.find({ grade: student.gradeLevel }).populate(
+  const rawClasses = await Class.find({ grade: student.gradeLevel }).populate(
     'teacherId',
-    'username email'
+    'username email avatar'
+  )
+
+  // Build the last-7-days window aligned to start of today, for weekly progress bucketing
+  const now = new Date()
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  )
+  const weekStart = new Date(startOfToday)
+  weekStart.setDate(weekStart.getDate() - 6) // 7-day window ending today
+
+  const enriched = await Promise.all(
+    rawClasses.map(async (c) => {
+      const classId = c._id
+
+      // --- Attendance % ---
+      const attendanceRecords = await Attendance.find({
+        classId,
+        userId: studentId,
+      }).select('present date')
+
+      const counted = attendanceRecords.filter((a) => a.present !== 'Holiday')
+      const presentCount = counted.filter((a) => a.present === 'present').length
+      const attendancePercentage = counted.length
+        ? Math.round((presentCount / counted.length) * 100)
+        : null
+
+      // --- Performance % + Weekly progress (two-hop via Quiz.classId) ---
+      const classQuizzes = await Quiz.find({ classId }).select('_id')
+      const quizIds = classQuizzes.map((q) => q._id)
+
+      let performancePercentage: number | null = null
+      const weeklyBuckets: Array<number[]> = Array.from({ length: 7 }, () => [])
+
+      if (quizIds.length) {
+        const completedResults = await QuizResult.find({
+          quizId: { $in: quizIds },
+          studentId,
+          'progress.status': 'completed',
+        }).select('percentage createdAt')
+
+        if (completedResults.length) {
+          const total = completedResults.reduce(
+            (sum, r) => sum + (r.percentage || 0),
+            0
+          )
+          performancePercentage = Math.round(total / completedResults.length)
+        }
+
+        for (const r of completedResults) {
+          const created = (r as any).createdAt as Date | undefined
+          if (!created) continue
+          if (created < weekStart) continue
+          const dayIndex = Math.floor(
+            (created.getTime() - weekStart.getTime()) / (24 * 60 * 60 * 1000)
+          )
+          if (dayIndex >= 0 && dayIndex < 7) {
+            weeklyBuckets[dayIndex].push(r.percentage || 0)
+          }
+        }
+      }
+
+      const weeklyProgress = weeklyBuckets.map((bucket, i) => {
+        const day = new Date(weekStart)
+        day.setDate(day.getDate() + i)
+        return {
+          dayLabel: DAY_LABELS[day.getDay()],
+          percentage: bucket.length
+            ? Math.round(bucket.reduce((a, b) => a + b, 0) / bucket.length)
+            : null,
+        }
+      })
+
+      // --- Latest activity date (most recent attendance, else class.updated_at) ---
+      const lastAttendance = attendanceRecords
+        .map((a) => a.date)
+        .filter((d): d is Date => Boolean(d))
+        .sort((a, b) => b.getTime() - a.getTime())[0]
+
+      const lastActivityDate = (lastAttendance ?? c.get('updated_at') ?? now)
+        .toISOString()
+
+      const teacher = c.teacherId as any
+      const teacherAvatar =
+        (teacher && teacher.avatar && teacher.avatar.url) || null
+
+      return {
+        ...c.toObject(),
+        teacherAvatar,
+        attendancePercentage,
+        performancePercentage,
+        lastActivityDate,
+        weeklyProgress,
+      }
+    })
   )
 
   sendResponse(res, {
@@ -167,7 +266,7 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
     message: `Classes for student ${student.username} fetched successfully`,
     data: {
       student,
-      classes,
+      classes: enriched,
     },
   })
 })
