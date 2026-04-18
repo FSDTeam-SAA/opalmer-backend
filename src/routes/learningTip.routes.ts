@@ -1,10 +1,15 @@
 import express from 'express'
-import { protect, authorizeRoles } from '../middlewares/auth.middleware'
+import {
+  protect,
+  authorizeRoles,
+  authorizeTypes,
+} from '../middlewares/auth.middleware'
 
 import {
   createLearningTip,
   getLearningTipsByAdmin,
   getLearningTipsBySchool,
+  getLearningTipsByParent,
   getSingleLearningTip,
   updateLearningTip,
   deleteLearningTip,
@@ -13,8 +18,8 @@ import {
 const router = express.Router()
 
 // Create
-router.post('/', 
-    // protect, authorizeRoles('administrator'), 
+router.post('/',
+    // protect, authorizeRoles('administrator'),
 createLearningTip)
 
 // Get by adminId (paginated)
@@ -22,6 +27,14 @@ router.get('/by-admin', getLearningTipsByAdmin)
 
 // Get by schoolId
 router.get('/by-school', getLearningTipsBySchool)
+
+// Get tips aggregated across all schools for the authenticated parent's children
+router.get(
+  '/by-parent/me',
+  protect,
+  authorizeTypes('parent'),
+  getLearningTipsByParent
+)
 
 // Single
 router.get('/:id', getSingleLearningTip)
