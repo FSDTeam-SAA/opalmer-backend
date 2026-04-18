@@ -5,6 +5,7 @@ import {
   getMySchoolAllTeachers,
   loginUser,
   registerUser,
+  searchStudentById,
   updateUser,
 } from "../controllers/user.controller";
 import { upload } from "../middlewares/multer.middleware";
@@ -21,6 +22,11 @@ router.post('/login', loginUser)
 router.get(
   "/administrators",
   getAllAdministrators
+);
+
+router.get(
+  "/search-student",
+  searchStudentById
 );
 
 router.get(

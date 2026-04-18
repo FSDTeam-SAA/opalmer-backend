@@ -157,6 +157,25 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Search student by Id
+export const searchStudentById = catchAsync(async (req: Request, res: Response) => {
+  const { Id } = req.query;
+  if (!Id || typeof Id !== "string") {
+    throw new AppError(400, "Student Id query parameter is required.");
+  }
+
+  // Exact match (case insensitive) for the student 'Id'
+  const students = await User.find({ Id: new RegExp(`^${Id}$`, "i"), type: "student" })
+    .select("username Id gradeLevel age avatar");
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student search result",
+    data: students,
+  });
+});
+
 // Get all administrators
 export const getAllAdministrators = catchAsync(
   async (_req: Request, res: Response) => {
