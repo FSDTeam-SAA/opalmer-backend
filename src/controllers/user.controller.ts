@@ -7,6 +7,28 @@ import jwt from "jsonwebtoken";
 import school from "../models/school.model";
 import sendResponse from "../utils/sendResponse";
 import httpStatus from "http-status";
+import { IUser } from "../interface/user.interface";
+
+// Shared shape for auth + profile responses. Keep this in one place so the
+// login, /me and update endpoints hand the client identical fields.
+const toPublicUser = (user: IUser) => ({
+  id: user._id,
+  username: user.username,
+  Id: user.Id,
+  role: user.role,
+  type: user.type,
+  state: user.state,
+  email: user.email,
+  phoneNumber: user.phoneNumber,
+  age: user.age,
+  gradeLevel: user.gradeLevel,
+  gender: user.gender,
+  schoolId: user.schoolId,
+  avatar: user.avatar,
+  isActive: user.isActive,
+  created_at: user.created_at,
+  updated_at: user.updated_at,
+});
 
 /*****************
  * REGISTER USER *
@@ -144,18 +166,93 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
     message: "Login successful",
     data: {
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        Id: user.Id,
-        role: user.role,
-        type: user.type,
-        state: user.state,
-        avatar: user.avatar,
-      },
+      user: toPublicUser(user),
     },
   });
 });
+
+/*************************
+ * GET CURRENT USER (ME) *
+ *************************/
+export const getMe = catchAsync(async (req: Request, res: Response) => {
+  const authUser = req.user as unknown as IUser | undefined;
+  if (!authUser?._id) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
+  }
+
+  const user = await User.findById(authUser._id).select(
+    "-password -refreshToken -verificationInfo -password_reset_token"
+  );
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Current user fetched successfully",
+    data: toPublicUser(user),
+  });
+});
+
+/*******************
+ * CHANGE PASSWORD *
+ *******************/
+export const changePassword = catchAsync(
+  async (req: Request, res: Response) => {
+    const authUser = req.user as unknown as IUser | undefined;
+    if (!authUser?._id) {
+      throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
+    }
+
+    const { oldPassword, newPassword } = req.body as {
+      oldPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!oldPassword || !newPassword) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "oldPassword and newPassword are required."
+      );
+    }
+    if (newPassword.length < 6) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "New password must be at least 6 characters long."
+      );
+    }
+    if (oldPassword === newPassword) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "New password must be different from the old password."
+      );
+    }
+
+    const user = await User.findById(authUser._id).select("+password");
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
+    }
+
+    const matches = await User.isPasswordMatched(oldPassword, user.password);
+    if (!matches) {
+      throw new AppError(
+        httpStatus.UNAUTHORIZED,
+        "Current password is incorrect."
+      );
+    }
+
+    // The pre-save hook on User hashes this before persistence.
+    user.password = newPassword;
+    await user.save();
+
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Password updated successfully",
+    });
+  }
+);
 
 // Search student by Id
 export const searchStudentById = catchAsync(async (req: Request, res: Response) => {
@@ -255,14 +352,36 @@ export const getMySchoolAllTeachers = catchAsync(
 // Update user info
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const authUser = req.user as unknown as IUser | undefined;
+
+  if (!authUser?._id) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
+  }
+
+  // Owner-only: a user may update their own profile; administrators may
+  // update anyone's. This guards against the historical "any token updates
+  // any user" bug when the route had no protect middleware.
+  const isOwner = authUser._id.toString() === id;
+  const isAdmin = authUser.role === "administrator" || authUser.role === "admin";
+  if (!isOwner && !isAdmin) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not allowed to update this user."
+    );
+  }
+
   const updateData: Record<string, any> = { ...req.body };
 
-  // Disallow updating restricted fields
+  // Fields clients must never mutate through this endpoint.
   const restrictedFields = [
     "password",
     "role",
     "refreshToken",
     "verificationInfo",
+    "password_reset_token",
+    "isActive",
+    "Id",
+    "schoolId",
   ];
   restrictedFields.forEach((field) => delete updateData[field]);
 
@@ -280,7 +399,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
   const user = await User.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
-  }).select("-password -refreshToken");
+  }).select("-password -refreshToken -verificationInfo -password_reset_token");
 
   if (!user) {
     return sendResponse(res, {
@@ -294,6 +413,6 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "User updated successfully",
-    data: user,
+    data: toPublicUser(user),
   });
 });

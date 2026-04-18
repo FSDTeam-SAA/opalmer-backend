@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { Notification } from '../models/notification.model'
 import catchAsync from '../utils/catchAsync'
 import httpStatus from 'http-status'
+import AppError from '../errors/AppError'
 
 /*********************************
  * GET ALL NOTIFICATIONS BY USER *
@@ -39,6 +40,31 @@ export const markAllAsRead = catchAsync(async (req: Request, res: Response) => {
     modifiedCount: result.modifiedCount,
   })
 })
+
+/**********************************
+ * MARK ONE NOTIFICATION AS READ  *
+ **********************************/
+export const markOneAsRead = catchAsync(
+  async (req: Request, res: Response) => {
+    const { notificationId } = req.params
+
+    const notification = await Notification.findByIdAndUpdate(
+      notificationId,
+      { isViewed: true },
+      { new: true }
+    )
+
+    if (!notification) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Notification not found')
+    }
+
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: 'Notification marked as read',
+      data: notification,
+    })
+  }
+)
 
 
 

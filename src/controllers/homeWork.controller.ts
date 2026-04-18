@@ -80,8 +80,6 @@ export const getHomeworkByClass = catchAsync(async (req, res) => {
         throw new AppError(httpStatus.BAD_REQUEST, 'Invalid class ID')
 
     const homework = await Homework.findByClass(classId)
-    if (homework.length === 0)
-        throw new AppError(httpStatus.NOT_FOUND, 'No homework found for this class')
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -101,8 +99,6 @@ export const getHomeworkByUser = catchAsync(async (req, res) => {
         throw new AppError(httpStatus.BAD_REQUEST, 'Invalid user ID')
 
     const homework = await Homework.findByUser(userId)
-    if (homework.length === 0)
-        throw new AppError(httpStatus.NOT_FOUND, 'No homework found for this user')
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
