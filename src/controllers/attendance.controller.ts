@@ -144,7 +144,11 @@ export const getAllAttendance = catchAsync(async (req, res) => {
  ****************************/
 export const changeAttendanceStatus = catchAsync(async (req, res) => {
   const { id } = req.params
-  const { status } = req.body
+  const status =
+    req.body.status ??
+    req.body.statusText ??
+    req.body.statusLabel ??
+    req.body.customStatus
 
   if (id === undefined) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Attendance Id is required')
