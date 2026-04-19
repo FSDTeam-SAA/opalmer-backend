@@ -26,13 +26,16 @@ export const createClassAttendance = catchAsync(async (req, res) => {
 
   const attendanceDate = date ? new Date(date) : new Date()
 
-  // Provent duplicate attendance for same date and class
+  // Non-mutating start/end of day (UTC), matches getAllAttendance's pattern
+  const startOfDay = new Date(attendanceDate)
+  startOfDay.setUTCHours(0, 0, 0, 0)
+  const endOfDay = new Date(attendanceDate)
+  endOfDay.setUTCHours(23, 59, 59, 999)
+
+  // Prevent duplicate attendance for same date and class
   const existingRecords = await Attendance.find({
     classId,
-    date: {
-      $gte: new Date(attendanceDate.setHours(0, 0, 0, 0)),
-      $lt: new Date(attendanceDate.setHours(23, 59, 59, 999)),
-    },
+    date: { $gte: startOfDay, $lte: endOfDay },
   })
 
   if (existingRecords.length > 0) {
@@ -46,16 +49,17 @@ export const createClassAttendance = catchAsync(async (req, res) => {
   const attendanceDocument = assignStudent.map((stu) => ({
     classId,
     userId: stu.studentId._id,
-    present: 'absent',
-    date: attendanceDate,
+    status: 'absent',
+    date: startOfDay,
   }))
 
-  // Insert all data
-  await Attendance.insertMany(attendanceDocument)
+  // Insert all data and keep the persisted docs so _id is returned
+  const inserted = await Attendance.insertMany(attendanceDocument)
+
   res.status(201).json({
     success: true,
     message: 'Attendance created for all students in class',
-    data: attendanceDocument,
+    data: inserted,
   })
 })
 
@@ -98,15 +102,23 @@ export const getAllAttendance = catchAsync(async (req, res) => {
  ****************************/
 export const changeAttendanceStatus = catchAsync(async (req, res) => {
   const { id } = req.params
-  const { present } = req.body
+  const { status } = req.body
 
   if (id === undefined) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Attendance Id is required')
   }
 
+  const allowed = ['present', 'absent', 'tardy', 'Holiday']
+  if (!status || !allowed.includes(status)) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `status is required and must be one of: ${allowed.join(', ')}`
+    )
+  }
+
   const updatedAttendance = await Attendance.findByIdAndUpdate(
     id,
-    { present },
+    { status },
     { new: true }
   )
 

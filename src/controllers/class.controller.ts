@@ -182,10 +182,10 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
       const attendanceRecords = await Attendance.find({
         classId,
         userId: studentId,
-      }).select('present date')
+      }).select('status date')
 
-      const counted = attendanceRecords.filter((a) => a.present !== 'Holiday')
-      const presentCount = counted.filter((a) => a.present === 'present').length
+      const counted = attendanceRecords.filter((a) => a.status !== 'Holiday')
+      const presentCount = counted.filter((a) => a.status === 'present').length
       const attendancePercentage = counted.length
         ? Math.round((presentCount / counted.length) * 100)
         : null
