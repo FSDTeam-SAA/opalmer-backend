@@ -271,3 +271,36 @@ export const getClassAttendanceStats = catchAsync(async (req, res) => {
     data: { percentage },
   })
 })
+
+export const getStudentAttendanceStats = catchAsync(async (req, res) => {
+  const { studentId } = req.params
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const stats = await Attendance.aggregate([
+    {
+      $match: {
+        userId: new Types.ObjectId(studentId),
+        date: { $gte: thirtyDaysAgo },
+      },
+    },
+    {
+      $group: {
+        _id: { $toLower: '$status' },
+        count: { $sum: 1 },
+      },
+    },
+  ])
+
+  const total = stats.reduce((acc, curr) => acc + curr.count, 0)
+  const present = stats.find((s) => s._id === 'present')?.count || 0
+  const percentage = total > 0 ? Math.round((present / total) * 100) : 0
+
+  res.status(200).json({
+    success: true,
+    data: {
+      percentage,
+      totalRecords: total,
+    },
+  })
+})
