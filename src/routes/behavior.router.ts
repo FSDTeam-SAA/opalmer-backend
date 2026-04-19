@@ -8,14 +8,21 @@ router.post(
   "/create",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.createBehavior
+  behaviorController.createBehavior,
 );
 
 router.get(
   "/teacher-behaviors",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.getBehaviorByTeacher
+  behaviorController.getBehaviorByTeacher,
+);
+
+router.get(
+  "/student/:studentId",
+  protect,
+  authorizeTypes("teacher"),
+  behaviorController.getBehaviorsByStudentId,
 );
 
 router.get(
@@ -26,31 +33,38 @@ router.get(
 );
 
 router.get(
+  "/my-child/:studentId",
+  protect,
+  authorizeTypes("parent"),
+  behaviorController.getBehaviorForMyChild,
+);
+
+router.get(
   "/",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.getAllBehaviors
+  behaviorController.getAllBehaviors,
 );
 
 router.get(
   "/:behaviorId",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.getSingleBehavior
+  behaviorController.getSingleBehavior,
 );
 
 router.put(
   "/update/:behaviorId",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.updateBehavior
+  behaviorController.updateBehavior,
 );
 
 router.delete(
   "/delete/:behaviorId",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.deleteBehavior
+  behaviorController.deleteBehavior,
 );
 
 const behaviorRouter = router;

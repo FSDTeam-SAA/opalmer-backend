@@ -7,6 +7,7 @@ import { User } from '../models/user.model'
 import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
 import { buildMetaPagination, getPaginationParams } from '../utils/pagination'
+import { Types } from 'mongoose'
 
 /**************************************
  * CREATE ATTENDANCE FOR ENTIRE CLASS *
@@ -223,5 +224,103 @@ export const getStudentAttendance = catchAsync(async (req, res) => {
     success: true,
     message: 'Student attendance fetched successfully',
     data: { attendanceRecords, meta },
+  })
+})
+
+/******************************************
+ * GET CLASS ATTENDANCE STATS (30 DAYS) *
+ ******************************************/
+export const getClassAttendanceStats = catchAsync(async (req, res) => {
+  const { classId } = req.params
+
+  if (!classId) throw new AppError(400, 'Class Id is required')
+
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  // 1. Get the class to find its grade
+  const classInfo = await Class.findById(classId)
+  if (!classInfo) throw new AppError(404, 'Class not found')
+
+  // 2. Get total students in that grade
+  const studentCount = await User.countDocuments({
+    type: 'student',
+    gradeLevel: classInfo.grade,
+  })
+
+  // 3. Get unique dates where attendance was taken for this class in last 30 days
+  const uniqueDates = await Attendance.distinct('date', {
+    classId: new Types.ObjectId(classId),
+    date: { $gte: thirtyDaysAgo },
+  })
+  const totalDays = uniqueDates.length
+
+  // 3. Get total present count
+  const presentCount = await Attendance.countDocuments({
+    classId: new Types.ObjectId(classId),
+    date: { $gte: thirtyDaysAgo },
+    status: { $regex: /^present$/i },
+  })
+
+  let percentage = 0
+  if (studentCount > 0 && totalDays > 0) {
+    // Overall % = (Total Present) / (Students * Recorded Days) * 100
+    percentage = Math.round((presentCount / (studentCount * totalDays)) * 100)
+  }
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Class attendance stats fetched successfully',
+    data: { percentage },
+  })
+})
+
+export const getStudentAttendanceStats = catchAsync(async (req, res) => {
+  const { studentId } = req.params
+  const { classId } = req.query
+
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  // 1. Get total days attendance was recorded (for the class if classId is provided, or for the student if not)
+  let totalDays = 0
+  if (classId) {
+    const uniqueDates = await Attendance.distinct('date', {
+      classId: new Types.ObjectId(classId as string),
+      date: { $gte: thirtyDaysAgo },
+    })
+    totalDays = uniqueDates.length
+  } else {
+    // Fallback: use student's own records count
+    const uniqueDates = await Attendance.distinct('date', {
+      userId: new Types.ObjectId(studentId),
+      date: { $gte: thirtyDaysAgo },
+    })
+    totalDays = uniqueDates.length
+  }
+
+  // 2. Get total present count for this student
+  const query: any = {
+    userId: new Types.ObjectId(studentId),
+    date: { $gte: thirtyDaysAgo },
+    status: { $regex: /^present$/i },
+  }
+  if (classId) {
+    query.classId = new Types.ObjectId(classId as string)
+  }
+
+  const presentCount = await Attendance.countDocuments(query)
+
+  let percentage = 0
+  if (totalDays > 0) {
+    percentage = Math.round((presentCount / totalDays) * 100)
+  }
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Student attendance stats fetched successfully',
+    data: { percentage },
   })
 })

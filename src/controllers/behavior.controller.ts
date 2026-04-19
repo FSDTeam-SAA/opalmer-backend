@@ -93,7 +93,7 @@ const getAllBehaviors = catchAsync(async (req, res) => {
 const getBehaviorByTeacher = catchAsync(async (req, res) => {
   try {
     const { _id: teacherId } = req.user as any;
-    
+
     const teacher = await User.findById(teacherId);
     if (!teacher) {
       throw new AppError(400, "Teacher not found");
@@ -234,6 +234,65 @@ const deleteBehavior = catchAsync(async (req, res) => {
   }
 });
 
+const getBehaviorForMyChild = catchAsync(async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { _id: parentId } = req.user as any;
+
+    // parent check
+    const parent = await User.findById(parentId);
+    if (!parent) {
+      throw new AppError(400, "Parent not found");
+    }
+
+    // student check + parent validation
+    const student = await ParentsChild.findOne({
+      parentId,
+      childId: studentId,
+    });
+    if (!student) {
+      throw new AppError(400, "It's not your child");
+    }
+
+    // behavior fetch
+    const result = await Behavior.find({ studentId });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Behaviors fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
+const getBehaviorsByStudentId = catchAsync(async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const result = await Behavior.find({ studentId })
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Behaviors fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const behaviorController = {
   createBehavior,
   getSingleBehavior,
@@ -242,6 +301,8 @@ const behaviorController = {
   getBehaviorByStudent,
   updateBehavior,
   deleteBehavior,
+  getBehaviorForMyChild,
+  getBehaviorsByStudentId,
 };
 
 export default behaviorController;

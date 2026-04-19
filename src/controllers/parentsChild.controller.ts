@@ -138,7 +138,7 @@ export const getParentsByChildId = catchAsync(
 
     const parents = await ParentsChild.find({ childId }).populate(
       'parentId',
-      'username email role'
+      'username email role avatar'
     )
 
     sendResponse(res, {
