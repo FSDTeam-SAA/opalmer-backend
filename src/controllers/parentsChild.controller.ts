@@ -6,8 +6,6 @@ import { QuizResult } from '../models/quizResult.model'
 import AppError from '../errors/AppError'
 import catchAsync from '../utils/catchAsync'
 import sendResponse from '../utils/sendResponse'
-import { count } from 'console'
-import { count } from 'console'
 
 /*****************
  * CREATE RELATION

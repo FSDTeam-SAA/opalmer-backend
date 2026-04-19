@@ -54,7 +54,7 @@ router.get(
 router.get(
   "/class/:classId",
   protect,
-  authorizeTypes("teacher"),
+  authorizeTypes("teacher", "parent"),
   lessonController.getLessonsByClass
 )
 
