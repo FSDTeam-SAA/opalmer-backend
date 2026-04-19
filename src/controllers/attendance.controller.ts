@@ -7,6 +7,7 @@ import { User } from '../models/user.model'
 import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
 import { buildMetaPagination, getPaginationParams } from '../utils/pagination'
+import { Types } from 'mongoose'
 
 /**************************************
  * CREATE ATTENDANCE FOR ENTIRE CLASS *
@@ -223,5 +224,50 @@ export const getStudentAttendance = catchAsync(async (req, res) => {
     success: true,
     message: 'Student attendance fetched successfully',
     data: { attendanceRecords, meta },
+  })
+})
+
+/******************************************
+ * GET CLASS ATTENDANCE STATS (30 DAYS) *
+ ******************************************/
+export const getClassAttendanceStats = catchAsync(async (req, res) => {
+  const { classId } = req.params
+
+  if (!classId) throw new AppError(400, 'Class Id is required')
+
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  // Use aggregation to find present count vs total count in the last 30 days
+  const stats = await Attendance.aggregate([
+    {
+      $match: {
+        classId: new Types.ObjectId(classId),
+        date: { $gte: thirtyDaysAgo },
+      },
+    },
+    {
+      $group: {
+        _id: '$classId',
+        total: { $sum: 1 },
+        present: {
+          $sum: {
+            $cond: [{ $eq: ['$status', 'present'] }, 1, 0],
+          },
+        },
+      },
+    },
+  ])
+
+  let percentage = 0
+  if (stats.length > 0) {
+    percentage = Math.round((stats[0].present / stats[0].total) * 100)
+  }
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Class attendance stats fetched successfully',
+    data: { percentage },
   })
 })
