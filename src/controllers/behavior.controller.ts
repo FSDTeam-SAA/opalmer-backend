@@ -238,6 +238,31 @@ const getBehaviorForMyChild = catchAsync(async (req, res) => {
   }
 });
 
+const getBehaviorsByStudentId = catchAsync(async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const result = await Behavior.find({ studentId })
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Behaviors fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const behaviorController = {
   createBehavior,
   getSingleBehavior,
@@ -247,6 +272,7 @@ const behaviorController = {
   updateBehavior,
   deleteBehavior,
   getBehaviorForMyChild,
+  getBehaviorsByStudentId,
 };
 
 export default behaviorController;
