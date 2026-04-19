@@ -76,10 +76,11 @@ export const getChildrenByParentId = catchAsync(
       'childId',
       'username email age gradeLevel avatar'
     )
+    const validChildren = children.filter((relation: any) => relation.childId)
 
     // Calculate progress and tagText for each child
     const enhancedChildren = await Promise.all(
-      children.map(async (relation: any) => {
+      validChildren.map(async (relation: any) => {
         let childData = relation.childId;
         if (childData && childData._id) {
           // Fetch completed quiz results for this child
