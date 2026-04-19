@@ -119,7 +119,12 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
 
 const getAcademicDocumentForChild = catchAsync(async (req, res) => {
   const { _id: parentId } = req.user as any;
-  const childId = (req.query.childId || req.query.childsid)?.toString();
+  const childId = (
+    req.query.childId ||
+    req.query.childsid ||
+    req.query.childsId ||
+    req.query.studentId
+  )?.toString();
 
   if (!childId) {
     throw new AppError(400, "childId query parameter is required");
