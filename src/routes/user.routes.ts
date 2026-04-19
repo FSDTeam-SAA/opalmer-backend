@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  assignTeacherToSchool,
   changePassword,
   getAllAdministrators,
   getMe,
@@ -37,6 +38,13 @@ router.get(
   protect,
   authorizeRoles("administrator"),
   getMySchoolAllTeachers
+);
+
+router.patch(
+  "/assign-teacher-school",
+  protect,
+  authorizeRoles("admin", "administrator"),
+  assignTeacherToSchool
 );
 
 // Authenticated profile edit. Controller further enforces owner-or-admin

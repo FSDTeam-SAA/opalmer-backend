@@ -349,6 +349,67 @@ export const getMySchoolAllTeachers = catchAsync(
   }
 );
 
+/****************************
+ * ASSIGN TEACHER TO SCHOOL *
+ ****************************/
+export const assignTeacherToSchool = catchAsync(
+  async (req: Request, res: Response) => {
+    const authUser = req.user as unknown as IUser | undefined;
+    const { teacherId, schoolId } = req.body as {
+      teacherId?: string;
+      schoolId?: string;
+    };
+
+    if (!authUser?._id) {
+      throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
+    }
+
+    if (!teacherId || !schoolId) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "teacherId and schoolId are required"
+      );
+    }
+
+    const targetSchool = await school.findById(schoolId);
+    if (!targetSchool) {
+      throw new AppError(httpStatus.NOT_FOUND, "School not found");
+    }
+
+    if (
+      authUser.role === "administrator" &&
+      targetSchool.administrator?.toString() !== authUser._id.toString()
+    ) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "You can only assign teachers to your own school"
+      );
+    }
+
+    const teacher = await User.findById(teacherId);
+    if (!teacher) {
+      throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+    }
+
+    if (teacher.type !== "teacher") {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Selected user is not a teacher"
+      );
+    }
+
+    teacher.schoolId = targetSchool._id;
+    await teacher.save();
+
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Teacher assigned to school successfully",
+      data: toPublicUser(teacher),
+    });
+  }
+);
+
 // Update user info
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;

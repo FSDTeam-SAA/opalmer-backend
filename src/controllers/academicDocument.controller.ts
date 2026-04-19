@@ -1,5 +1,6 @@
 import AppError from "../errors/AppError";
 import AcademicDocument from "../models/academicDocument.model";
+import { ParentsChild } from "../models/parentsChild.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
@@ -114,6 +115,50 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
   } catch (error) {
     throw new AppError(500, error as string);
   }
+});
+
+const getAcademicDocumentForChild = catchAsync(async (req, res) => {
+  const { _id: parentId } = req.user as any;
+  const childId = (req.query.childId || req.query.childsid)?.toString();
+
+  if (!childId) {
+    throw new AppError(400, "childId query parameter is required");
+  }
+
+  const child = await User.findById(childId);
+  if (!child || child.type !== "student") {
+    throw new AppError(404, "Child student not found");
+  }
+
+  const relation = await ParentsChild.findOne({ parentId, childId });
+  if (!relation) {
+    throw new AppError(
+      403,
+      "You are not allowed to view this child's academic documents"
+    );
+  }
+
+  const result = await AcademicDocument.find({ studentId: childId })
+    .populate({
+      path: "studentId",
+      select: "username Id gradeLevel",
+    })
+    .populate({
+      path: "teacherId",
+      select: "username Id role type",
+    })
+    .populate({
+      path: "schoolId",
+      select: "name",
+    })
+    .sort({ created_at: -1 });
+
+  return sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Academic documents fetched successfully",
+    data: result,
+  });
 });
 
 const getAcademicDocumentForTeacher = catchAsync(async (req, res) => {
@@ -240,6 +285,7 @@ const deleteAcademicDocument = catchAsync(async (req, res) => {
 const academicDocumentController = {
   createAcademicDocument,
   getAcademicDocumentForStudent,
+  getAcademicDocumentForChild,
   getAcademicDocumentForTeacher,
   getSingleAcademicDocument,
   updateAcademicDocument,

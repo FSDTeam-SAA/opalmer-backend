@@ -21,6 +21,13 @@ router.get(
 );
 
 router.get(
+  "/child-documents",
+  protect,
+  authorizeTypes("parent"),
+  academicDocumentController.getAcademicDocumentForChild
+);
+
+router.get(
   "/teacher-documents",
   protect,
   authorizeTypes("teacher"),
