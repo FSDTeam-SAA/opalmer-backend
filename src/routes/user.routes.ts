@@ -1,6 +1,8 @@
 import express from "express";
 import {
+  changePassword,
   getAllAdministrators,
+  getMe,
   getMySchoolAllStudents,
   getMySchoolAllTeachers,
   loginUser,
@@ -9,25 +11,19 @@ import {
   updateUser,
 } from "../controllers/user.controller";
 import { upload } from "../middlewares/multer.middleware";
-import {
-  authorizeRoles,
-  authorizeTypes,
-  protect,
-} from "../middlewares/auth.middleware";
+import { authorizeRoles, protect } from "../middlewares/auth.middleware";
 const router = express.Router();
 
-router.post('/register', upload.single('image'), registerUser)
-router.post('/login', loginUser)
+router.post("/register", upload.single("image"), registerUser);
+router.post("/login", loginUser);
 
-router.get(
-  "/administrators",
-  getAllAdministrators
-);
+// Current user & password management (token-scoped).
+router.get("/me", protect, getMe);
+router.post("/change-password", protect, changePassword);
 
-router.get(
-  "/search-student",
-  searchStudentById
-);
+router.get("/administrators", getAllAdministrators);
+
+router.get("/search-student", searchStudentById);
 
 router.get(
   "/my-students",
@@ -43,11 +39,8 @@ router.get(
   getMySchoolAllTeachers
 );
 
-router.put(
-  "/:id",
-  // protect,
-  upload.single("image"),
-  updateUser
-);
+// Authenticated profile edit. Controller further enforces owner-or-admin
+// authorization using the token-bound user.
+router.put("/:id", protect, upload.single("image"), updateUser);
 
 export default router;

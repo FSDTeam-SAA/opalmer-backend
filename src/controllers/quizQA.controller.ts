@@ -1,8 +1,10 @@
 import { Request, Response } from 'express'
+import httpStatus from 'http-status'
 import { QuizQA } from '../models/quizQA.model'
 import { generateQuizQuestions } from '../services/quizAI.service'
 import catchAsync from '../utils/catchAsync'
 import AppError from '../errors/AppError'
+import sendResponse from '../utils/sendResponse'
 
 /************************
  * CREATE AI QUIESTIONS *
@@ -27,6 +29,33 @@ export const createAIQuestions = catchAsync(
       success: true,
       message: 'Questions generated and saved successfully',
       data: savedQA,
+    })
+  }
+)
+
+/****************************
+ * GET QUESTIONS BY QUIZ ID *
+ ****************************/
+export const getQuizQAByQuizId = catchAsync(
+  async (req: Request, res: Response) => {
+    const { quizId } = req.params
+    if (!quizId) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'quizId is required')
+    }
+
+    const qa = await QuizQA.findOne({ quizId })
+    if (!qa) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        'No questions found for this quiz'
+      )
+    }
+
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Quiz questions fetched successfully',
+      data: qa,
     })
   }
 )

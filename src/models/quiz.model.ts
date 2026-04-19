@@ -8,7 +8,9 @@ const quizSchema: Schema<IQuiz> = new Schema(
     title: { type: String, required: true },
     description: { type: String, default: '' },
     image: { type: String, default: '' },
-    time: { type: Number, default: 0 },
+    // Duration of the quiz in minutes; surfaced to the student UI as
+    // "{count} Questions · {time} min".
+    time: { type: Number, default: 5, min: 1 },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )

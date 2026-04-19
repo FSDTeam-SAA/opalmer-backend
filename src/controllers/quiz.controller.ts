@@ -1,8 +1,38 @@
 import { Request, Response } from 'express'
+import { PipelineStage, Types } from 'mongoose'
 import { Quiz } from '../models/quiz.model'
 import catchAsync from '../utils/catchAsync'
 import AppError from '../errors/AppError'
 import { uploadToCloudinary } from '../utils/cloudinary'
+
+// Shared aggregation that attaches `questionCount` (size of the matching
+// QuizQA.questions array) to every quiz returned by a list endpoint. Keeps
+// the question-count source of truth in one place and avoids N+1 lookups
+// from the client.
+const withQuestionCount = (
+  match: PipelineStage.Match['$match']
+): PipelineStage[] => [
+  { $match: match },
+  { $sort: { created_at: -1 } },
+  {
+    $lookup: {
+      from: 'quizqas',
+      localField: '_id',
+      foreignField: 'quizId',
+      as: 'qa',
+    },
+  },
+  {
+    $addFields: {
+      questionCount: {
+        $size: {
+          $ifNull: [{ $arrayElemAt: ['$qa.questions', 0] }, []],
+        },
+      },
+    },
+  },
+  { $project: { qa: 0 } },
+]
 
 // Create a new quiz
 export const createQuiz = catchAsync(async (req: Request, res: Response) => {
@@ -57,7 +87,7 @@ export const updateQuiz = catchAsync(async (req: Request, res: Response) => {
 // Get all quizzes
 export const getAllQuizzes = catchAsync(
   async (_req: Request, res: Response) => {
-    const quizzes = await Quiz.find().sort({ created_at: -1 })
+    const quizzes = await Quiz.aggregate(withQuestionCount({}))
     res.status(200).json({
       success: true,
       data: quizzes,
@@ -69,7 +99,9 @@ export const getAllQuizzes = catchAsync(
 export const getQuizzesByClass = catchAsync(
   async (req: Request, res: Response) => {
     const { classId } = req.params
-    const quizzes = await Quiz.find({ classId }).sort({ created_at: -1 })
+    const quizzes = await Quiz.aggregate(
+      withQuestionCount({ classId: new Types.ObjectId(classId) })
+    )
 
     res.status(200).json({
       success: true,
@@ -97,7 +129,9 @@ export const getQuizzesByTeacher = catchAsync(
   async (req: Request, res: Response) => {
     const { teacherId } = req.params
 
-    const quizzes = await Quiz.find({ teacherId }).sort({ created_at: -1 })
+    const quizzes = await Quiz.aggregate(
+      withQuestionCount({ teacherId: new Types.ObjectId(teacherId) })
+    )
 
     res.status(200).json({
       success: true,

@@ -80,11 +80,15 @@ export const getHomeworkByClass = catchAsync(async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(classId))
         throw new AppError(httpStatus.BAD_REQUEST, 'Invalid class ID')
 
+<<<<<<< HEAD
     const filter: Record<string, any> = { classId }
     if (archived === 'true') filter.archived = true
     else if (archived === 'false') filter.archived = false
 
     const homework = await Homework.find(filter).sort({ created_at: -1 })
+=======
+    const homework = await Homework.findByClass(classId)
+>>>>>>> 56b33679605ae8929d52c3a04279d2afa70f5c62
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -104,8 +108,6 @@ export const getHomeworkByUser = catchAsync(async (req, res) => {
         throw new AppError(httpStatus.BAD_REQUEST, 'Invalid user ID')
 
     const homework = await Homework.findByUser(userId)
-    if (homework.length === 0)
-        throw new AppError(httpStatus.NOT_FOUND, 'No homework found for this user')
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

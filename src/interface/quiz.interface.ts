@@ -7,9 +7,11 @@ export interface IQuiz {
   title: string
   description?: string
   image?: string
-  time: number // in minutes
+  time: number // duration in minutes
   created_at?: Date
   updated_at?: Date
+  // Computed by list-endpoint aggregation (withQuestionCount); not persisted.
+  questionCount?: number
 }
 
 // Static methods interface
