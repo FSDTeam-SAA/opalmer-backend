@@ -21,7 +21,7 @@ router.get(
 router.get(
   "/student-behaviors",
   protect,
-  authorizeTypes("student"),
+  authorizeTypes("student", "parent"),
   behaviorController.getBehaviorByStudent
 );
 

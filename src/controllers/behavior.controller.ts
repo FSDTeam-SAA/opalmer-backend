@@ -1,5 +1,6 @@
 import AppError from "../errors/AppError";
 import { Behavior } from "../models/behavior.model";
+import { ParentsChild } from "../models/parentsChild.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import sendResponse from "../utils/sendResponse";
@@ -120,33 +121,63 @@ const getBehaviorByTeacher = catchAsync(async (req, res) => {
 });
 
 const getBehaviorByStudent = catchAsync(async (req, res) => {
-  try {
-    const { _id: studentId } = req.user as any;
+  const authUser = req.user as any;
+  const authUserId = authUser?._id;
 
-    const student = await User.findById(studentId);
-    if (!student) {
-      throw new AppError(400, "Student not found");
+  if (!authUserId) {
+    throw new AppError(401, "User not authenticated");
+  }
+
+  let studentId = authUserId;
+
+  if (authUser.type === "parent") {
+    const childId = (req.query.childId || req.query.studentId)?.toString();
+
+    if (!childId) {
+      throw new AppError(400, "childId query parameter is required");
     }
 
-    const result = await Behavior.find({ studentId })
-      .populate({
-        path: "studentId",
-        select: "username email role type",
-      })
-      .populate({
-        path: "teacherId",
-        select: "username email role type",
-      });
+    const child = await User.findById(childId);
+    if (!child || child.type !== "student") {
+      throw new AppError(404, "Child student not found");
+    }
 
-    return sendResponse(res, {
-      statusCode: 200,
-      success: true,
-      message: "Behaviors fetched successfully",
-      data: result,
+    const relation = await ParentsChild.findOne({
+      parentId: authUserId,
+      childId,
     });
-  } catch (error) {
-    throw new AppError(500, error as string);
+
+    if (!relation) {
+      throw new AppError(
+        403,
+        "You are not allowed to view this child's behavior"
+      );
+    }
+
+    studentId = childId;
+  } else {
+    const student = await User.findById(studentId);
+    if (!student || student.type !== "student") {
+      throw new AppError(400, "Student not found");
+    }
   }
+
+  const result = await Behavior.find({ studentId })
+    .populate({
+      path: "studentId",
+      select: "username email role type",
+    })
+    .populate({
+      path: "teacherId",
+      select: "username email role type",
+    });
+
+  return sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Behaviors fetched successfully",
+    data: result,
+  });
 });
 
 const updateBehavior = catchAsync(async (req, res) => {
