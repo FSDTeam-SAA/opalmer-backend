@@ -5,6 +5,8 @@ import {
   getMe,
   getMySchoolAllStudents,
   getMySchoolAllTeachers,
+  getStudentCountByGrade,
+  getStudentsByGrade,
   loginUser,
   registerUser,
   searchStudentById,
@@ -38,6 +40,9 @@ router.get(
   authorizeRoles("administrator"),
   getMySchoolAllTeachers
 );
+
+router.get("/students/count/:grade", protect, getStudentCountByGrade);
+router.get("/students/grade/:grade", protect, getStudentsByGrade);
 
 // Authenticated profile edit. Controller further enforces owner-or-admin
 // authorization using the token-bound user.

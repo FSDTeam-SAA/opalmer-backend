@@ -416,3 +416,41 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     data: toPublicUser(user),
   });
 });
+
+/*********************************
+ * GET STUDENT COUNT BY GRADE LEVEL *
+ *********************************/
+export const getStudentCountByGrade = catchAsync(async (req: Request, res: Response) => {
+  const { grade } = req.params;
+  
+  const count = await User.countDocuments({
+    type: "student",
+    gradeLevel: Number(grade),
+  });
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student count fetched successfully",
+    data: { count },
+  });
+});
+
+/*********************************
+ * GET STUDENTS BY GRADE LEVEL *
+ *********************************/
+export const getStudentsByGrade = catchAsync(async (req: Request, res: Response) => {
+  const { grade } = req.params;
+
+  const students = await User.find({
+    type: "student",
+    gradeLevel: Number(grade),
+  }).select("username Id phoneNumber gradeLevel age avatar");
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Students fetched successfully",
+    data: students,
+  });
+});
