@@ -2,6 +2,8 @@ import AppError from '../errors/AppError'
 import catchAsync from '../utils/catchAsync'
 import { Attendance } from '../models/attendance.model'
 import { StuAssignToClass } from '../models/stuAssignToClass.model'
+import { Class } from '../models/class.model'
+import { User } from '../models/user.model'
 import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
 import { buildMetaPagination, getPaginationParams } from '../utils/pagination'
@@ -14,17 +16,10 @@ export const createClassAttendance = catchAsync(async (req, res) => {
 
   if (!classId) throw new AppError(400, 'Class Id is required')
 
-  // find all the student in the class
-  const assignStudent = await StuAssignToClass.find({ classId }).populate(
-    'studentId',
-    '_id'
-  )
-
-  if (assignStudent.length === 0) {
-    throw new AppError(404, 'No students found for this class')
-  }
-
   const attendanceDate = date ? new Date(date) : new Date()
+  if (Number.isNaN(attendanceDate.getTime())) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid attendance date')
+  }
 
   // Non-mutating start/end of day (UTC), matches getAllAttendance's pattern
   const startOfDay = new Date(attendanceDate)
@@ -32,34 +27,81 @@ export const createClassAttendance = catchAsync(async (req, res) => {
   const endOfDay = new Date(attendanceDate)
   endOfDay.setUTCHours(23, 59, 59, 999)
 
-  // Prevent duplicate attendance for same date and class
+  // First use explicit class assignments. If the class has no assignment rows,
+  // fall back to the grade-based membership used by /classes/student/:studentId.
+  const assignments = await StuAssignToClass.find({ classId }).select(
+    'studentId'
+  )
+  let rosterSource: 'assignment' | 'grade' = 'assignment'
+  let studentIds = assignments.map((assignment) =>
+    assignment.studentId.toString()
+  )
+
+  if (studentIds.length === 0) {
+    const classInfo = await Class.findById(classId).select('grade')
+
+    if (!classInfo) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Class not found')
+    }
+
+    const gradeStudents = await User.find({
+      type: 'student',
+      gradeLevel: classInfo.grade,
+      isActive: true,
+    }).select('_id')
+
+    rosterSource = 'grade'
+    studentIds = gradeStudents.map((student) => student.id)
+  }
+
+  studentIds = Array.from(new Set(studentIds))
+
+  if (studentIds.length === 0) {
+    throw new AppError(httpStatus.NOT_FOUND, 'No students found for this class')
+  }
+
+  // Attendance is unique per student per class per day. Existing rows should
+  // not block missing students from getting records.
   const existingRecords = await Attendance.find({
     classId,
+    userId: { $in: studentIds },
     date: { $gte: startOfDay, $lte: endOfDay },
   })
 
-  if (existingRecords.length > 0) {
-    throw new AppError(
-      409,
-      'Attendance for this class on this date already exists'
-    )
-  }
+  const existingStudentIds = new Set(
+    existingRecords.map((record) => record.userId.toString())
+  )
+  const missingStudentIds = studentIds.filter(
+    (studentId) => !existingStudentIds.has(studentId)
+  )
 
   // Prepare attendance documents
-  const attendanceDocument = assignStudent.map((stu) => ({
+  const attendanceDocument = missingStudentIds.map((studentId) => ({
     classId,
-    userId: stu.studentId._id,
+    userId: studentId,
     status: 'absent',
     date: startOfDay,
   }))
 
   // Insert all data and keep the persisted docs so _id is returned
-  const inserted = await Attendance.insertMany(attendanceDocument)
+  const inserted = attendanceDocument.length
+    ? await Attendance.insertMany(attendanceDocument)
+    : []
 
-  res.status(201).json({
+  sendResponse(res, {
+    statusCode: inserted.length ? httpStatus.CREATED : httpStatus.OK,
     success: true,
-    message: 'Attendance created for all students in class',
-    data: inserted,
+    message: inserted.length
+      ? 'Attendance created for missing students in class'
+      : 'Attendance already exists for all students in class on this date',
+    data: {
+      rosterSource,
+      rosterCount: studentIds.length,
+      createdCount: inserted.length,
+      existingCount: existingRecords.length,
+      created: inserted,
+      existing: existingRecords,
+    },
   })
 })
 
@@ -108,17 +150,24 @@ export const changeAttendanceStatus = catchAsync(async (req, res) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Attendance Id is required')
   }
 
-  const allowed = ['present', 'absent', 'tardy', 'Holiday']
-  if (!status || !allowed.includes(status)) {
+  if (typeof status !== 'string' || status.trim().length === 0) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      `status is required and must be one of: ${allowed.join(', ')}`
+      'status is required and must be a non-empty string'
+    )
+  }
+
+  const normalizedStatus = status.trim()
+  if (normalizedStatus.length > 50) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'status must be 50 characters or less'
     )
   }
 
   const updatedAttendance = await Attendance.findByIdAndUpdate(
     id,
-    { status },
+    { status: normalizedStatus },
     { new: true }
   )
 

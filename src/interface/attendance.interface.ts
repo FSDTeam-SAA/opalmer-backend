@@ -3,7 +3,7 @@ import { Document, Model, Types } from 'mongoose'
 export interface IAttendance extends Document {
   classId: Types.ObjectId
   userId: Types.ObjectId
-  status: 'present' | 'absent' | 'tardy' | 'Holiday'
+  status: string
   date: Date
   created_at?: Date
   updated_at?: Date

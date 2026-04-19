@@ -4,10 +4,11 @@ import { IAttendance, AttendanceModel } from '../interface/attendance.interface'
 const attendanceSchema: Schema<IAttendance> = new Schema(
   {
     classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
-    userId:{ type: Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     status: {
       type: String,
-      enum: ['present', 'absent', 'tardy', 'Holiday'],
+      trim: true,
+      maxlength: 50,
       default: 'absent',
     },
     date: { type: Date, default: Date.now },
