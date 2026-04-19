@@ -238,30 +238,34 @@ export const getClassAttendanceStats = catchAsync(async (req, res) => {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  // Use aggregation to find present count vs total count in the last 30 days
-  const stats = await Attendance.aggregate([
-    {
-      $match: {
-        classId: new Types.ObjectId(classId),
-        date: { $gte: thirtyDaysAgo },
-      },
-    },
-    {
-      $group: {
-        _id: '$classId',
-        total: { $sum: 1 },
-        present: {
-          $sum: {
-            $cond: [{ $eq: ['$status', 'present'] }, 1, 0],
-          },
-        },
-      },
-    },
-  ])
+  // 1. Get the class to find its grade
+  const classInfo = await Class.findById(classId)
+  if (!classInfo) throw new AppError(404, 'Class not found')
+
+  // 2. Get total students in that grade
+  const studentCount = await User.countDocuments({
+    type: 'student',
+    gradeLevel: classInfo.grade,
+  })
+
+  // 3. Get unique dates where attendance was taken for this class in last 30 days
+  const uniqueDates = await Attendance.distinct('date', {
+    classId: new Types.ObjectId(classId),
+    date: { $gte: thirtyDaysAgo },
+  })
+  const totalDays = uniqueDates.length
+
+  // 3. Get total present count
+  const presentCount = await Attendance.countDocuments({
+    classId: new Types.ObjectId(classId),
+    date: { $gte: thirtyDaysAgo },
+    status: { $regex: /^present$/i },
+  })
 
   let percentage = 0
-  if (stats.length > 0) {
-    percentage = Math.round((stats[0].present / stats[0].total) * 100)
+  if (studentCount > 0 && totalDays > 0) {
+    // Overall % = (Total Present) / (Students * Recorded Days) * 100
+    percentage = Math.round((presentCount / (studentCount * totalDays)) * 100)
   }
 
   sendResponse(res, {
@@ -274,33 +278,49 @@ export const getClassAttendanceStats = catchAsync(async (req, res) => {
 
 export const getStudentAttendanceStats = catchAsync(async (req, res) => {
   const { studentId } = req.params
+  const { classId } = req.query
+
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const stats = await Attendance.aggregate([
-    {
-      $match: {
-        userId: new Types.ObjectId(studentId),
-        date: { $gte: thirtyDaysAgo },
-      },
-    },
-    {
-      $group: {
-        _id: { $toLower: '$status' },
-        count: { $sum: 1 },
-      },
-    },
-  ])
+  // 1. Get total days attendance was recorded (for the class if classId is provided, or for the student if not)
+  let totalDays = 0
+  if (classId) {
+    const uniqueDates = await Attendance.distinct('date', {
+      classId: new Types.ObjectId(classId as string),
+      date: { $gte: thirtyDaysAgo },
+    })
+    totalDays = uniqueDates.length
+  } else {
+    // Fallback: use student's own records count
+    const uniqueDates = await Attendance.distinct('date', {
+      userId: new Types.ObjectId(studentId),
+      date: { $gte: thirtyDaysAgo },
+    })
+    totalDays = uniqueDates.length
+  }
 
-  const total = stats.reduce((acc, curr) => acc + curr.count, 0)
-  const present = stats.find((s) => s._id === 'present')?.count || 0
-  const percentage = total > 0 ? Math.round((present / total) * 100) : 0
+  // 2. Get total present count for this student
+  const query: any = {
+    userId: new Types.ObjectId(studentId),
+    date: { $gte: thirtyDaysAgo },
+    status: { $regex: /^present$/i },
+  }
+  if (classId) {
+    query.classId = new Types.ObjectId(classId as string)
+  }
 
-  res.status(200).json({
+  const presentCount = await Attendance.countDocuments(query)
+
+  let percentage = 0
+  if (totalDays > 0) {
+    percentage = Math.round((presentCount / totalDays) * 100)
+  }
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
     success: true,
-    data: {
-      percentage,
-      totalRecords: total,
-    },
+    message: 'Student attendance stats fetched successfully',
+    data: { percentage },
   })
 })
