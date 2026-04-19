@@ -80,15 +80,12 @@ export const getHomeworkByClass = catchAsync(async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(classId))
         throw new AppError(httpStatus.BAD_REQUEST, 'Invalid class ID')
 
-<<<<<<< HEAD
     const filter: Record<string, any> = { classId }
     if (archived === 'true') filter.archived = true
     else if (archived === 'false') filter.archived = false
 
     const homework = await Homework.find(filter).sort({ created_at: -1 })
-=======
-    const homework = await Homework.findByClass(classId)
->>>>>>> 56b33679605ae8929d52c3a04279d2afa70f5c62
+    // const homework = await Homework.findByClass(classId)
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -177,27 +174,27 @@ export const deleteHomework = catchAsync(async (req, res) => {
  * ARCHIVE HOMEWORK       *
  *************************/
 export const archiveHomework = catchAsync(async (req, res) => {
-  const { id } = req.params
-  const { archived } = req.body // read from request body
+    const { id } = req.params
+    const { archived } = req.body // read from request body
 
-  if (!mongoose.Types.ObjectId.isValid(id))
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid homework ID')
+    if (!mongoose.Types.ObjectId.isValid(id))
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid homework ID')
 
-  if (typeof archived !== 'boolean')
-    throw new AppError(httpStatus.BAD_REQUEST, 'archived must be true or false')
+    if (typeof archived !== 'boolean')
+        throw new AppError(httpStatus.BAD_REQUEST, 'archived must be true or false')
 
-  const updatedHomework = await Homework.findByIdAndUpdate(
-    id,
-    { archived },
-    { new: true }
-  )
+    const updatedHomework = await Homework.findByIdAndUpdate(
+        id,
+        { archived },
+        { new: true }
+    )
 
-  if (!updatedHomework) throw new AppError(httpStatus.NOT_FOUND, 'Homework not found')
+    if (!updatedHomework) throw new AppError(httpStatus.NOT_FOUND, 'Homework not found')
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: `Homework ${archived ? 'archived' : 'unarchived'} successfully`,
-    data: updatedHomework,
-  })
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: `Homework ${archived ? 'archived' : 'unarchived'} successfully`,
+        data: updatedHomework,
+    })
 })
