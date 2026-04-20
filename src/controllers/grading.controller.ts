@@ -366,7 +366,9 @@ const listTeacherSessions = catchAsync(async (req, res) => {
     filter.classId = classId
   }
 
-  const sessions = await Quiz.find(filter).sort({ created_at: -1 })
+  const sessions = await Quiz.find(filter)
+    .populate('classId', 'subject grade')
+    .sort({ createdAt: -1 })
   const data = await Promise.all(
     sessions.map((session) => withSessionMeta(session))
   )
@@ -385,6 +387,7 @@ const getTeacherSession = catchAsync(async (req, res) => {
     teacherId,
     req.params.sessionId
   )
+  await session.populate('classId', 'subject grade')
 
   return sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -750,7 +753,7 @@ const getSessionResults = catchAsync(async (req, res) => {
 
   const roster = await getClassRoster(classData)
   const results = await QuizResult.find({ quizId: session._id })
-    .populate('studentId', 'username Id gradeLevel avatar')
+    .populate('studentId', 'username name Id grade gradeLevel avatar')
     .sort({ updatedAt: -1 })
 
   const resultByStudent = new Map(
