@@ -9,9 +9,9 @@ import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 
+import sendEmail from "../utils/sendEmail";
 import sendResponse from "../utils/sendResponse";
 import verificationCodeTemplate from "../utils/verificationCodeTemplate";
-import sendEmail from "../utils/sendEmail";
 
 // Shared shape for auth + profile responses. Keep this in one place so the
 // login, /me and update endpoints hand the client identical fields.
@@ -566,5 +566,72 @@ export const toggleTwoFactorAuth = catchAsync(async (req: Request, res: Response
     statusCode: httpStatus.OK,
     success: true,
     message: `Two factor authentication ${updatedUser.isTwoFactorAuthEnabled ? "enabled" : "disabled"} successfully`,
+  });
+});
+
+
+export const verifyOTP = catchAsync(async (req: Request, res: Response) => {
+  const { _id: userId } = req.user as any;
+  const { otp } = req.body;
+
+  console.log("req", userId)
+
+  if (!userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Unauthorized user");
+  }
+
+  if (!otp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "OTP is required");
+  }
+
+  const user = await User.findById(userId).select("+hashedOtp +otpExpires");
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  // ❌ No OTP requested
+  if (!user.hashedOtp || !user.otpExpires) {
+    throw new AppError(400, "OTP not requested");
+  }
+
+  // ⏰ Expiry check
+  if (user.otpExpires < new Date()) {
+    throw new AppError(400, "OTP expired");
+  }
+
+  // 🔐 Match OTP
+  const isOtpMatched = await bcrypt.compare(otp.toString(), user.hashedOtp);
+
+  if (!isOtpMatched) {
+    throw new AppError(400, "Invalid OTP");
+  }
+
+  // ✅ Clear OTP after success
+  user.hashedOtp = undefined;
+  user.otpExpires = undefined;
+
+  await user.save();
+
+  // 🎯 FINAL ACCESS TOKEN (IMPORTANT)
+  const token = jwt.sign(
+    {
+      userId: user._id,
+      role: user.role,
+      type: user.type,
+      Id: user.Id,
+    },
+    process.env.JWT_SECRET!,
+    { expiresIn: "7d" }
+  );
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "OTP verified successfully",
+    data: {
+      token,
+      user: toPublicUser(user),
+    },
   });
 });

@@ -43,7 +43,7 @@ const userSchema: Schema = new Schema<IUser>(
     gender: { type: String, enum: ['male', 'female', 'other'] },
     isActive: { type: Boolean, default: true },
     isTwoFactorAuthEnabled: { type: Boolean, default: false },
-    hashedOtp: { type: String, select: false },
+    hashedOtp: { type: String, select: false, default: '' },
     otpExpires: { type: Date, select: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
