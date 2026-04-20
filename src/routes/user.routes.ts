@@ -11,9 +11,10 @@ import {
   registerUser,
   searchStudentById,
   toggleTwoFactorAuth,
-  updateUser
+  updateUser,
+  verifyOTP
 } from "../controllers/user.controller";
-import { authorizeRoles, protect } from "../middlewares/auth.middleware";
+import { authorizeRoles, authorizeTypes, protect } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
 const router = express.Router();
 
@@ -42,10 +43,9 @@ router.get(
   getMySchoolAllTeachers
 );
 
-router.put("/toggle", protect, authorizeRoles("administrator"),
+router.put("/toggle", protect, toggleTwoFactorAuth);
 
-   toggleTwoFactorAuth);
-
+router.post("/verify-otp", protect,  verifyOTP);
 
 router.get("/students/grade/:grade", getStudentsByGrade);
 router.get("/students/count/:grade", getStudentCountByGrade);

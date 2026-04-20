@@ -27,7 +27,7 @@ export const protect = async (
 
     // Attach user to request
 
-    console.log("decoded", decoded);
+    
 
     // req.user = decoded;
     req.user = user;
