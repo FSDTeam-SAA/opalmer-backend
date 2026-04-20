@@ -42,6 +42,9 @@ router.get(
   getMySchoolAllTeachers
 );
 
+router.get("/students/grade/:grade", getStudentsByGrade);
+router.get("/students/count/:grade", getStudentCountByGrade);
+
 // Authenticated profile edit. Controller further enforces owner-or-admin
 // authorization using the token-bound user.
 router.put("/:id", protect, upload.single("image"), updateUser);

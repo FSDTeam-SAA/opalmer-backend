@@ -16,7 +16,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       throw new AppError(400, "Teacher not found");
     }
 
-    if (user.schoolId === null) {
+    if (!user.schoolId) {
       throw new AppError(400, "You are not a teacher of any school");
     }
 
@@ -229,9 +229,9 @@ const getSingleAcademicDocument = catchAsync(async (req, res) => {
 
 const updateAcademicDocument = catchAsync(async (req, res) => {
   try {
-    const { academicDocumentId } = req.params;
+    const { id } = req.params;
 
-    const doc = await AcademicDocument.findById(academicDocumentId);
+    const doc = await AcademicDocument.findById(id);
     if (!doc) {
       throw new AppError(400, "Academic document not found");
     }
@@ -248,7 +248,7 @@ const updateAcademicDocument = catchAsync(async (req, res) => {
     }
 
     const updatedDocument = await AcademicDocument.findByIdAndUpdate(
-      academicDocumentId,
+      id,
       {
         document,
       },
@@ -268,14 +268,14 @@ const updateAcademicDocument = catchAsync(async (req, res) => {
 
 const deleteAcademicDocument = catchAsync(async (req, res) => {
   try {
-    const { academicDocumentId } = req.params;
+    const { id } = req.params;
 
-    const document = await AcademicDocument.findById(academicDocumentId);
+    const document = await AcademicDocument.findById(id);
     if (!document) {
       throw new AppError(400, "Academic document not found");
     }
 
-    await AcademicDocument.findByIdAndDelete(academicDocumentId);
+    await AcademicDocument.findByIdAndDelete(id);
 
     return sendResponse(res, {
       statusCode: 200,
