@@ -8,6 +8,7 @@ export interface IQuiz {
   description?: string
   image?: string
   time: number // duration in minutes
+  status?: 'draft' | 'published'
   created_at?: Date
   updated_at?: Date
   // Computed by list-endpoint aggregation (withQuestionCount); not persisted.
