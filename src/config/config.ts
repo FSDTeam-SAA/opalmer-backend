@@ -9,4 +9,8 @@ export default {
     apiKey: process.env.CLOUDINARY_API_KEY,
     apiSecret: process.env.CLOUDINARY_API_SECRET,
   },
+  email: {
+    emailAddress: process.env.EMAIL_ADDRESS,
+    emailPass: process.env.EMAIL_PASSWORD,
+  },
 };

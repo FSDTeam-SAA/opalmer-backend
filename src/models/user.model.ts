@@ -1,5 +1,5 @@
-import mongoose, { Schema, Document, Model } from 'mongoose'
 import bcrypt from 'bcrypt'
+import mongoose, { Schema } from 'mongoose'
 import { IUser, UserModel } from '../interface/user.interface'
 
 const userSchema: Schema = new Schema<IUser>(
@@ -42,6 +42,9 @@ const userSchema: Schema = new Schema<IUser>(
     schoolId: { type: Schema.Types.ObjectId, ref: 'School', default: null },
     gender: { type: String, enum: ['male', 'female', 'other'] },
     isActive: { type: Boolean, default: true },
+    isTwoFactorAuthEnabled: { type: Boolean, default: false },
+    hashedOtp: { type: String, select: false },
+    otpExpires: { type: Date, select: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )

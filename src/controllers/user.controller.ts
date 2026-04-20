@@ -1,13 +1,17 @@
+import bcrypt from "bcrypt";
 import { Request, Response } from "express";
-import { User } from "../models/user.model";
+import httpStatus from "http-status";
+import jwt from "jsonwebtoken";
 import AppError from "../errors/AppError";
+import { IUser } from "../interface/user.interface";
+import school from "../models/school.model";
+import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
-import jwt from "jsonwebtoken";
-import school from "../models/school.model";
+
 import sendResponse from "../utils/sendResponse";
-import httpStatus from "http-status";
-import { IUser } from "../interface/user.interface";
+import verificationCodeTemplate from "../utils/verificationCodeTemplate";
+import sendEmail from "../utils/sendEmail";
 
 // Shared shape for auth + profile responses. Keep this in one place so the
 // login, /me and update endpoints hand the client identical fields.
@@ -28,6 +32,7 @@ const toPublicUser = (user: IUser) => ({
   isActive: user.isActive,
   created_at: user.created_at,
   updated_at: user.updated_at,
+  isTwoFactorAuthEnabled: user.isTwoFactorAuthEnabled,
 });
 
 /*****************
@@ -160,6 +165,34 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
     process.env.JWT_SECRET || "default_secret",
     { expiresIn: "7d" }
   );
+
+  if (user.isTwoFactorAuthEnabled) {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const hashedOtp = await bcrypt.hash(otp, 10);
+  const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+  user.hashedOtp = hashedOtp;
+  user.otpExpires = otpExpires;
+  await user.save();
+
+  try {
+    await sendEmail({
+      to: user.email as string,
+      subject: "Your 2FA Verification Code",
+      html: verificationCodeTemplate(otp),
+    });
+  } catch (err: any) {
+    throw new AppError(500, "Could not send 2FA verification email");
+  }
+  return res.status(200).json({
+    success: true,
+    message: "Verification code sent to your email",
+    data: {
+      accessToken: token,
+      is2FA: true,
+    },
+  });
+}
 
   res.status(200).json({
     success: true,
@@ -513,5 +546,25 @@ export const getStudentsByGrade = catchAsync(async (req: Request, res: Response)
     success: true,
     message: "Students fetched successfully",
     data: students,
+  });
+});
+
+
+
+export const toggleTwoFactorAuth = catchAsync(async (req: Request, res: Response) => {
+  const { _id: userId } = req.user as any;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  user.isTwoFactorAuthEnabled = !user.isTwoFactorAuthEnabled;
+  const updatedUser = await user.save();
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Two factor authentication ${updatedUser.isTwoFactorAuthEnabled ? "enabled" : "disabled"} successfully`,
   });
 });
