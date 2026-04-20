@@ -28,6 +28,9 @@ export interface IUser extends Document {
   schoolId: Types.ObjectId
   gender: 'male' | 'female' | 'other'
   isActive: boolean
+  isTwoFactorAuthEnabled: boolean
+  hashedOtp?: string
+  otpExpires?: Date
 }
 
 // Static methods interface

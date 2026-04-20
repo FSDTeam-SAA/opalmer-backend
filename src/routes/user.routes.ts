@@ -1,6 +1,5 @@
 import express from "express";
 import {
-  assignTeacherToSchool,
   changePassword,
   getAllAdministrators,
   getMe,
@@ -11,10 +10,11 @@ import {
   loginUser,
   registerUser,
   searchStudentById,
-  updateUser,
+  toggleTwoFactorAuth,
+  updateUser
 } from "../controllers/user.controller";
-import { upload } from "../middlewares/multer.middleware";
 import { authorizeRoles, protect } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/multer.middleware";
 const router = express.Router();
 
 router.post("/register", upload.single("image"), registerUser);
@@ -42,11 +42,17 @@ router.get(
   getMySchoolAllTeachers
 );
 
+router.put("/toggle", protect, authorizeRoles("administrator"),
+
+   toggleTwoFactorAuth);
+
+
 router.get("/students/grade/:grade", getStudentsByGrade);
 router.get("/students/count/:grade", getStudentCountByGrade);
 
 // Authenticated profile edit. Controller further enforces owner-or-admin
 // authorization using the token-bound user.
 router.put("/:id", protect, upload.single("image"), updateUser);
+
 
 export default router;
