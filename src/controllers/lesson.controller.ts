@@ -11,16 +11,18 @@ import sendResponse from "../utils/sendResponse";
 const createLesson = catchAsync(async (req, res) => {
   try {
     const { _id: userId } = req.user as any;
-    const { studentId, classId } = req.body;
+    const { studentId, classId, title } = req.body;
 
     const teacher = await User.findById(userId);
     if (!teacher) {
       throw new AppError(400, "Teacher not found");
     }
 
-    const student = await User.findById(studentId);
-    if (!student) {
-      throw new AppError(400, "Student not found");
+    if (studentId) {
+      const student = await User.findById(studentId);
+      if (!student) {
+        throw new AppError(400, "Student not found");
+      }
     }
 
     const isClassExist = await Class.findById(classId);
@@ -104,7 +106,16 @@ const getLessonsByStudent = catchAsync(async (req, res) => {
       throw new AppError(400, "Student not found");
     }
 
-    const result = await Lesson.find({ studentId })
+    const studentClasses = await StuAssignToClass.find({ studentId });
+    const classIds = studentClasses.map(item => item.classId);
+
+    const result = await Lesson.find({
+      $or: [
+        { studentId },
+        { classId: { $in: classIds }, studentId: { $exists: false } },
+        { classId: { $in: classIds }, studentId: null }
+      ]
+    })
       .populate({
         path: "studentId",
         select: "username email role type",
@@ -188,16 +199,18 @@ const getSingleLesson = catchAsync(async (req, res) => {
 const updateLesson = catchAsync(async (req, res) => {
   try {
     const { lessonId } = req.params;
-    const { studentId, objective, note, classId } = req.body;
+    const { studentId, objective, note, classId, title } = req.body;
 
     const lesson = await Lesson.findById(lessonId);
     if (!lesson) {
       throw new AppError(400, "Lesson not found");
     }
 
-    const student = await User.findById(studentId);
-    if (!student) {
-      throw new AppError(400, "Student not found");
+    if (studentId) {
+      const student = await User.findById(studentId);
+      if (!student) {
+        throw new AppError(400, "Student not found");
+      }
     }
 
     const isExistingClass = await Class.findById(classId);
@@ -221,6 +234,7 @@ const updateLesson = catchAsync(async (req, res) => {
       lessonId,
       {
         studentId,
+        title,
         objective,
         note,
         document,

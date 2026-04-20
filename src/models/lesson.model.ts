@@ -3,7 +3,8 @@ import { ILesson, LessonModel } from "../interface/lesson.interface";
 
 const lessonSchema: Schema<ILesson> = new Schema(
   {
-    studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    studentId: { type: Schema.Types.ObjectId, ref: "User", required: false },
+    title: { type: String, required: true, default: "Lesson" },
     teacherId: { type: Schema.Types.ObjectId, ref: "User" },
     classId: { type: Schema.Types.ObjectId, ref: "Class" },
     objective: { type: String, required: true },
