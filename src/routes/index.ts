@@ -1,26 +1,27 @@
 import { Router } from 'express'
-import userRoutes from '../routes/user.routes'
-import stuAssignToClassRoutes from '../routes/stuAssignToClass.routes'
 import classRoutes from '../routes/class.routes'
+import quizzesTestRouter from '../routes/quizResult.routes'
+import stuAssignToClassRoutes from '../routes/stuAssignToClass.routes'
+import userRoutes from '../routes/user.routes'
 import { aboutAndTermRouter } from './aboutAndTerm.router'
-import { featuresAndQuestionsRouter } from './featuresAndQuestions.router'
-import lessonRouter from './lesson.router'
+import academicDocumentRouter from './academicDocument.router'
+import dashboardRouter from './adminDashboard.router'
+import analysisRouter from './analysis.router'
 import attendanceRoutes from './attendance.routes'
 import behaviorRouter from './behavior.router'
-import schoolRouter from './school.router'
+import { featuresAndQuestionsRouter } from './featuresAndQuestions.router'
+import gradingRouter from './grading.routes'
+import { groupWorkRouter } from './groupWork.routes'
+import { homeworkRouter } from './homeWork.routes'
 import learningTipsRouters from './learningTip.routes'
+import lessonRouter from './lesson.router'
 import messageRouter from './message.route'
 import notificationRouter from './notification.route'
-import roomsRouter from './room.route'
-import academicDocumentRouter from './academicDocument.router'
-import { homeworkRouter } from './homeWork.routes'
-import { groupWorkRouter } from './groupWork.routes'
 import parantChildRouter from './parentsChild.route'
 import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
-import quizzesTestRouter from '../routes/quizResult.routes'
-import gradingRouter from './grading.routes'
-import dashboardRouter from './adminDashboard.router'
+import roomsRouter from './room.route'
+import schoolRouter from './school.router'
 
 const router = Router()
 
@@ -114,6 +115,10 @@ const moduleRoutes = [
     path: '/dashboard',
     route: dashboardRouter,
   },
+  {
+    path: '/analysis',
+    route: analysisRouter
+  }
 ]
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route))
