@@ -1,12 +1,13 @@
+import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import { Class } from "../models/class.model";
 import { Lesson } from "../models/lesson.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
+import { createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
-
 
 const createLesson = catchAsync(async (req, res) => {
   try {
@@ -25,16 +26,14 @@ const createLesson = catchAsync(async (req, res) => {
       }
     }
 
-    const isClassExist = await Class.findById(classId);
-    if (!isClassExist) {
+    const classInfo = await Class.findById(classId);
+    if (!classInfo) {
       throw new AppError(400, "Class not found");
     }
 
     let document = { public_id: "", url: "" };
     if (req.file) {
-      console.log(req.file);
       const uploadResult = await uploadToCloudinary(req.file.path);
-      console.log(12, uploadResult);
 
       if (uploadResult) {
         document = {
@@ -50,6 +49,41 @@ const createLesson = catchAsync(async (req, res) => {
       studentId,
       classId,
       document,
+    });
+
+    // 👉 CASE 1: specific student
+    if (studentId) {
+      await createNotification({
+        to: new mongoose.Types.ObjectId(studentId),
+        message: `New lesson assigned: ${title} in ${classInfo.grade} ${classInfo.subject}`,
+        type: "lesson",
+        id: result._id as any,
+      });
+    } else {
+      // 👉 CASE 2: all class students
+      const assignedStudents = await StuAssignToClass.find({
+        classId: classId,
+      });
+
+      await Promise.all(
+        assignedStudents.map((student) =>
+          createNotification({
+            to: new mongoose.Types.ObjectId(student.studentId as any),
+            message: `New lesson assigned: ${title} in ${classInfo.grade} ${classInfo.subject}`,
+            type: "lesson",
+            id: result._id as any,
+          }),
+        ),
+      );
+    }
+
+    const adminUsers = await User.findOne({ role: "admin" });
+
+    await createNotification({
+      to: new mongoose.Types.ObjectId(adminUsers!._id as any),
+      message: `New lesson created: ${title} in ${classInfo.grade} ${classInfo.subject}`,
+      type: "lesson",
+      id: result._id as any,
     });
 
     return sendResponse(res, {
@@ -107,14 +141,14 @@ const getLessonsByStudent = catchAsync(async (req, res) => {
     }
 
     const studentClasses = await StuAssignToClass.find({ studentId });
-    const classIds = studentClasses.map(item => item.classId);
+    const classIds = studentClasses.map((item) => item.classId);
 
     const result = await Lesson.find({
       $or: [
         { studentId },
         { classId: { $in: classIds }, studentId: { $exists: false } },
-        { classId: { $in: classIds }, studentId: null }
-      ]
+        { classId: { $in: classIds }, studentId: null },
+      ],
     })
       .populate({
         path: "studentId",
@@ -238,9 +272,9 @@ const updateLesson = catchAsync(async (req, res) => {
         objective,
         note,
         document,
-        classId
+        classId,
       },
-      { new: true }
+      { new: true },
     );
 
     return sendResponse(res, {
@@ -279,7 +313,6 @@ const deleteLesson = catchAsync(async (req, res) => {
   }
 });
 
-
 const getLessonsByClass = catchAsync(async (req, res) => {
   try {
     const { classId } = req.params;
@@ -309,7 +342,6 @@ const getLessonsByClass = catchAsync(async (req, res) => {
   }
 });
 
-
 const updateLessonStatus = catchAsync(async (req, res) => {
   try {
     const { lessonId } = req.params;
@@ -328,7 +360,7 @@ const updateLessonStatus = catchAsync(async (req, res) => {
           },
         },
       ],
-      { new: true }
+      { new: true },
     );
 
     return sendResponse(res, {
@@ -369,8 +401,6 @@ const getArchivedLessons = catchAsync(async (req, res) => {
   }
 });
 
-
-
 const lessonController = {
   createLesson,
   getLessonsByTeacher,
@@ -381,7 +411,7 @@ const lessonController = {
   deleteLesson,
   getLessonsByClass,
   updateLessonStatus,
-  getArchivedLessons
+  getArchivedLessons,
 };
 
 export default lessonController;
