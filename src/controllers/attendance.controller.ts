@@ -126,10 +126,12 @@ export const getAllAttendance = catchAsync(async (req, res) => {
   })
 
   if (attendance.length === 0) {
-    throw new AppError(
-      httpStatus.NOT_FOUND,
-      'No attendance found for this date'
-    )
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'No attendance found for this date',
+      data: [],
+    })
   }
 
   sendResponse(res, {
@@ -214,7 +216,12 @@ export const getStudentAttendance = catchAsync(async (req, res) => {
     .limit(limit)
 
   if (attendanceRecords.length === 0) {
-    throw new AppError(httpStatus.NOT_FOUND, 'No attendance records found')
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'No attendance records found',
+      data: { attendanceRecords: [], meta: buildMetaPagination(0, page, limit) },
+    })
   }
 
   const meta = buildMetaPagination(totalItems, page, limit)

@@ -45,10 +45,12 @@ export const getQuizQAByQuizId = catchAsync(
 
     const qa = await QuizQA.findOne({ quizId })
     if (!qa) {
-      throw new AppError(
-        httpStatus.NOT_FOUND,
-        'No questions found for this quiz'
-      )
+      return sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'No questions found for this quiz',
+        data: null,
+      })
     }
 
     return sendResponse(res, {
