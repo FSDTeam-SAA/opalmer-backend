@@ -26,9 +26,9 @@ export const getSingleStudentAnalysisController = catchAsync(
     let startDate = new Date();
 
     if (filter === "monthly") {
-      startDate.setMonth(startDate.getMonth() - 11); // last 12 months
+      startDate.setMonth(startDate.getMonth() - 11); 
     } else {
-      startDate.setDate(startDate.getDate() - 6); // last 7 days
+      startDate.setDate(startDate.getDate() - 6); 
     }
 
     // ✅ Only THIS student's attendance
@@ -142,3 +142,7 @@ export const getSingleStudentAnalysisController = catchAsync(
     });
   },
 );
+
+
+
+
