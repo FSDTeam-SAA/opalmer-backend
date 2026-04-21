@@ -1,12 +1,11 @@
 import app from './app'
-import dotenv from 'dotenv'
+import './config/env'
 import { connectDB } from './config/db'
 import { Server } from 'socket.io'
 import { createServer } from 'http'
 import { setupMessageSocket } from './sockets/message.socket'
 import { setupWebRTCSocket } from './sockets/webrtc.socket'
-
-dotenv.config()
+import { socketAuthMiddleware } from './sockets/socketAuth'
 
 const PORT = process.env.PORT || 5000
 
@@ -18,6 +17,8 @@ export const io = new Server(httpserver, {
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   },
 })
+
+io.use(socketAuthMiddleware as any)
 
 setupMessageSocket(io)
 setupWebRTCSocket(io)

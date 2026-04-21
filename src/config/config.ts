@@ -1,6 +1,4 @@
-import dotenv from 'dotenv'
-
-dotenv.config()
+import './env'
 
 export default {
   bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS || 10,

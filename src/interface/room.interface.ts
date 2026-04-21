@@ -11,6 +11,12 @@ export interface IRoom extends Document {
   created_at?: Date
   updated_at?: Date
   participants: IParticipant[]
+  type: 'direct' | 'group'
+  createdBy: Types.ObjectId
+  lastMessageId?: Types.ObjectId
+  lastMessageAt?: Date
+  blockedBy: Types.ObjectId[]
+  mutedBy: Types.ObjectId[]
 }
 
 export interface RoomModel extends Model<IRoom> {

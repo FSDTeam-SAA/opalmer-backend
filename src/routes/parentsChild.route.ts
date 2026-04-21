@@ -5,12 +5,18 @@ import {
   getChildrenByParentId,
   getParentsByChildId,
 } from '../controllers/parentsChild.controller'
+import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 
 const router = express.Router()
 
-router.post('/', createParentsChild)
-router.delete('/:id', deleteParentsChild)
-router.get('/parent/:parentId', getChildrenByParentId)
-router.get('/child/:childId', getParentsByChildId)
+router.post('/', protect, authorizeTypes('parent'), createParentsChild)
+router.delete('/:id', protect, authorizeTypes('parent'), deleteParentsChild)
+router.get('/parent/:parentId', protect, authorizeTypes('parent'), getChildrenByParentId)
+router.get(
+  '/child/:childId',
+  protect,
+  authorizeTypes('teacher', 'parent', 'student'),
+  getParentsByChildId
+)
 
 export default router

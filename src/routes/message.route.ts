@@ -1,5 +1,6 @@
 import express from 'express'
 import { upload } from '../middlewares/multer.middleware'
+import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 import {
   createMessage,
   deleteMessage,
@@ -9,10 +10,31 @@ import {
 
 const router = express.Router()
 
-router.post('/', upload.array('files'), createMessage)
-router.get('/:roomId', getMessagesByRoom)
-router.patch('/:messageId', updateMessage)
-router.delete('/:messageId', deleteMessage)
+router.post(
+  '/',
+  protect,
+  authorizeTypes('teacher', 'parent', 'student'),
+  upload.array('files'),
+  createMessage
+)
+router.get(
+  '/:roomId',
+  protect,
+  authorizeTypes('teacher', 'parent', 'student'),
+  getMessagesByRoom
+)
+router.patch(
+  '/:messageId',
+  protect,
+  authorizeTypes('teacher', 'parent', 'student'),
+  updateMessage
+)
+router.delete(
+  '/:messageId',
+  protect,
+  authorizeTypes('teacher', 'parent', 'student'),
+  deleteMessage
+)
 
 
 export default router

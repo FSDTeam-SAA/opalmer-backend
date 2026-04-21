@@ -6,17 +6,20 @@ import { QuizResult } from '../models/quizResult.model'
 import AppError from '../errors/AppError'
 import catchAsync from '../utils/catchAsync'
 import sendResponse from '../utils/sendResponse'
+import httpStatus from 'http-status'
+import { canMessageUser } from '../utils/chatAccess'
 
 /*****************
  * CREATE RELATION
  *****************/
 export const createParentsChild = catchAsync(
   async (req: Request, res: Response) => {
-    const { parentId } = req.body
+    const authUser = req.user as any
+    const parentId = authUser?._id?.toString()
     let { childId } = req.body
 
     if (!parentId || !childId) {
-      throw new AppError(400, 'parentId and childId are required.')
+      throw new AppError(400, 'childId is required.')
     }
 
     // If childId is not a valid MongoDB ObjectId, attempt to find user by custom 'Id' string
@@ -26,6 +29,19 @@ export const createParentsChild = catchAsync(
         throw new AppError(404, 'Student with the provided ID not found.')
       }
       childId = student._id
+    }
+
+    const parent = await User.findById(parentId).select('_id type isActive')
+    if (!parent || parent.type !== 'parent' || !parent.isActive) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'Only active parent accounts can create parent-child relations'
+      )
+    }
+
+    const childUser = await User.findById(childId).select('_id type isActive')
+    if (!childUser || childUser.type !== 'student' || !childUser.isActive) {
+      throw new AppError(400, 'Child must be an active student account')
     }
 
     // Prevent duplicate relation
@@ -50,12 +66,22 @@ export const createParentsChild = catchAsync(
  *****************/
 export const deleteParentsChild = catchAsync(
   async (req: Request, res: Response) => {
+    const authUser = req.user as any
     const { id } = req.params
 
-    const relation = await ParentsChild.findByIdAndDelete(id)
+    const relation = await ParentsChild.findById(id)
     if (!relation) {
       throw new AppError(404, 'Relation not found.')
     }
+
+    if (authUser?._id?.toString() !== relation.parentId.toString()) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'You can only delete your own parent-child relations'
+      )
+    }
+
+    await ParentsChild.findByIdAndDelete(id)
 
     sendResponse(res, {
       statusCode: 200,
@@ -70,7 +96,15 @@ export const deleteParentsChild = catchAsync(
  ***********************/
 export const getChildrenByParentId = catchAsync(
   async (req: Request, res: Response) => {
+    const authUser = req.user as any
     const { parentId } = req.params
+
+    if (authUser?._id?.toString() !== parentId.toString()) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'You can only view your own children'
+      )
+    }
 
     const children = await ParentsChild.find({ parentId }).populate(
       'childId',
@@ -134,7 +168,43 @@ export const getChildrenByParentId = catchAsync(
  **********************/
 export const getParentsByChildId = catchAsync(
   async (req: Request, res: Response) => {
+    const authUser = req.user as any
     const { childId } = req.params
+
+    const requesterType = authUser?.type
+    if (!requesterType) {
+      throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated')
+    }
+
+    if (requesterType === 'student' && authUser._id.toString() !== childId) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'Students can only view their own parents'
+      )
+    }
+
+    if (requesterType === 'parent') {
+      const ownRelation = await ParentsChild.exists({
+        parentId: authUser._id,
+        childId,
+      })
+      if (!ownRelation) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          'Parents can only view parent data for their own children'
+        )
+      }
+    }
+
+    if (requesterType === 'teacher') {
+      const access = await canMessageUser(authUser._id.toString(), childId)
+      if (!access.allowed) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          "Teachers can only view parents for students from their own classes"
+        )
+      }
+    }
 
     const parents = await ParentsChild.find({ childId }).populate(
       'parentId',

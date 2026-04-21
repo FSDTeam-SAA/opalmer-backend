@@ -635,3 +635,62 @@ export const verifyOTP = catchAsync(async (req: Request, res: Response) => {
     },
   });
 });
+
+/****************
+ * GET CONTACTS *
+ ****************/
+export const getContacts = catchAsync(async (req: Request, res: Response) => {
+  const authUser = req.user as unknown as IUser | undefined;
+  if (!authUser?._id) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
+  }
+
+  const currentUser = await User.findById(authUser._id);
+  if (!currentUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  let query: any = { 
+    _id: { $ne: currentUser._id },
+    isActive: true 
+  };
+
+  // If user belongs to a school, prioritize school contacts
+  if (currentUser.schoolId) {
+    query.schoolId = currentUser.schoolId;
+  }
+
+  // Role-based filtering logic
+  if (currentUser.role === 'teacher') {
+    // Teachers can message everyone in their school (students, parents, other teachers)
+    // No extra filtering needed for now
+  } else if (currentUser.type === 'student') {
+    // Students message teachers and other students
+    query.$or = [{ role: 'teacher' }, { type: 'student' }];
+  } else if (currentUser.role === 'parent') {
+    // Parents message teachers
+    query.role = 'teacher';
+  }
+
+  const contacts = await User.find(query)
+    .select("username Id role type avatar phoneNumber email gradeLevel")
+    .limit(50);
+
+  const formattedContacts = contacts.map(c => ({
+    id: c._id,
+    username: c.username,
+    role: c.role,
+    type: c.type,
+    avatar: c.avatar?.url || "",
+    phoneNumber: c.phoneNumber,
+    email: c.email,
+    gradeLevel: c.gradeLevel
+  }));
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Contacts fetched successfully",
+    data: formattedContacts,
+  });
+});

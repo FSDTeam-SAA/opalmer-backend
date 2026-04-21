@@ -12,7 +12,8 @@ import {
   searchStudentById,
   toggleTwoFactorAuth,
   updateUser,
-  verifyOTP
+  verifyOTP,
+  getContacts
 } from "../controllers/user.controller";
 import { authorizeRoles, authorizeTypes, protect } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
@@ -49,6 +50,7 @@ router.post("/verify-otp", protect,  verifyOTP);
 
 router.get("/students/grade/:grade", getStudentsByGrade);
 router.get("/students/count/:grade", getStudentCountByGrade);
+router.get("/contacts", protect, getContacts);
 
 // Authenticated profile edit. Controller further enforces owner-or-admin
 // authorization using the token-bound user.

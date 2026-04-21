@@ -22,6 +22,7 @@ import quizzesRouter from './quiz.routes'
 import quizzesQARouter from './quizQA.routes'
 import roomsRouter from './room.route'
 import schoolRouter from './school.router'
+import callLogRoutes from './callLog.route'
 
 const router = Router()
 
@@ -118,6 +119,10 @@ const moduleRoutes = [
   {
     path: '/analysis',
     route: analysisRouter
+  },
+  {
+    path: '/call-logs',
+    route: callLogRoutes
   }
 ]
 
