@@ -185,6 +185,10 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
     }
   }
 
+  if (senderType === 'teacher' && recipientType === 'teacher') {
+    return { allowed: true }
+  }
+
   return {
     allowed: false,
     reason: `Messaging between ${senderType} and ${recipientType} is not allowed`,

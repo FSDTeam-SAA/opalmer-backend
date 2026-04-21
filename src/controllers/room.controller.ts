@@ -259,7 +259,10 @@ export const getRoomsByUserId = catchAsync(
 
     const rooms = await Room.find({
       'participants.userId': authUser._id,
-    }).sort({ updated_at: -1 })
+    })
+      .populate('participants.userId', 'username avatar type')
+      .populate('lastMessageId')
+      .sort({ updated_at: -1 })
 
     res.status(200).json({
       success: true,
