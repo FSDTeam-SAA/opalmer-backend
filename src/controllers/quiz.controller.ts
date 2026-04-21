@@ -23,12 +23,21 @@ const withQuestionCount = (
     },
   },
   {
+    $lookup: {
+      from: 'users',
+      localField: 'teacherId',
+      foreignField: '_id',
+      as: 'teacher',
+    },
+  },
+  {
     $addFields: {
       questionCount: {
         $size: {
           $ifNull: [{ $arrayElemAt: ['$qa.questions', 0] }, []],
         },
       },
+      teacher: { $arrayElemAt: ['$teacher', 0] },
     },
   },
   { $project: { qa: 0 } },
