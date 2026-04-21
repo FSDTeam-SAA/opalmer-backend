@@ -661,15 +661,15 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
   }
 
   // Role-based filtering logic
-  if (currentUser.role === 'teacher') {
+  if (currentUser.type === 'teacher') {
     // Teachers can message everyone in their school (students, parents, other teachers)
     // No extra filtering needed for now
   } else if (currentUser.type === 'student') {
     // Students message teachers and other students
-    query.$or = [{ role: 'teacher' }, { type: 'student' }];
-  } else if (currentUser.role === 'parent') {
+    query.$or = [{ type: 'teacher' }, { type: 'student' }];
+  } else if (currentUser.type === 'parent') {
     // Parents message teachers
-    query.role = 'teacher';
+    query.type = 'teacher';
   }
 
   const contacts = await User.find(query)
