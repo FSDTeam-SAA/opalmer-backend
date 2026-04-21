@@ -41,34 +41,134 @@ export const createClass = catchAsync(async (req, res) => {
  * GET ALL CLASSES *
  *********************/
 export const getAllClasses = catchAsync(async (req, res) => {
-  const classes = await Class.find().populate('teacherId', 'username email')
+  const classes = await Class.find().populate("teacherId", "username email");
+
+  const classAnalytics = await Promise.all(
+    classes.map(async (cls) => {
+      // ======================
+      // ATTENDANCE
+      // ======================
+      const attendance = await Attendance.find({
+        classId: cls._id,
+      });
+
+      const totalAttendance = attendance.length;
+
+      const presentCount = attendance.filter(
+        (a) => a.status === "present",
+      ).length;
+
+      const attendanceRate =
+        totalAttendance > 0 ? (presentCount / totalAttendance) * 100 : 0;
+
+      // ======================
+      // QUIZ
+      // ======================
+      const studentIds = [
+        ...new Set(attendance.map((a) => a.userId.toString())),
+      ];
+
+      const quizResults = await QuizResult.find({
+        studentId: { $in: studentIds },
+      });
+
+      const totalQuiz = quizResults.length;
+
+      const avgQuizScore =
+        totalQuiz > 0
+          ? quizResults.reduce((sum, q) => sum + (q.percentage ?? 0), 0) / totalQuiz
+          : 0;
+
+      // ======================
+      // FINAL PERFORMANCE (WEIGHTED)
+      // ======================
+      const performance = attendanceRate * 0.4 + avgQuizScore * 0.6;
+
+      return {
+        ...cls.toObject(),
+        analytics: {
+          performance: Number(performance.toFixed(2)),
+        },
+      };
+    }),
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'All classes fetched successfully',
-    data: classes,
-  })
-})
+    message: "All classes fetched successfully",
+    data: classAnalytics,
+  });
+});
 
 /******************************
  * GET CLASSES BY TEACHER ID *
  ******************************/
 export const getClassesByTeacher = catchAsync(async (req, res) => {
-  const { teacherId } = req.params
+  const { teacherId } = req.params;
 
   const classes = await Class.find({ teacherId }).populate(
-    'teacherId',
-    'username email'
-  )
+    "teacherId",
+    "username email",
+  );
+
+  const result = await Promise.all(
+    classes.map(async (cls) => {
+      // ======================
+      // ATTENDANCE
+      // ======================
+      const attendance = await Attendance.find({
+        classId: cls._id,
+      });
+
+      const totalAttendance = attendance.length;
+
+      const presentCount = attendance.filter(
+        (a) => a.status === "present",
+      ).length;
+
+      const attendanceRate =
+        totalAttendance > 0 ? (presentCount / totalAttendance) * 100 : 0;
+
+      // ======================
+      // QUIZ
+      // ======================
+      const studentIds = [
+        ...new Set(attendance.map((a) => a.userId.toString())),
+      ];
+
+      const quizResults = await QuizResult.find({
+        studentId: { $in: studentIds },
+      });
+
+      const totalQuiz = quizResults.length;
+
+      const avgQuizScore =
+        totalQuiz > 0
+          ? quizResults.reduce((sum, q) => sum + (q.percentage ?? 0), 0) / totalQuiz
+          : 0;
+
+      // ======================
+      // PERFORMANCE SCORE
+      // ======================
+      const performance = attendanceRate * 0.4 + avgQuizScore * 0.6;
+
+      return {
+        ...cls.toObject(),
+        analytics: {
+          performance: Number(performance.toFixed(2)),
+        },
+      };
+    }),
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Classes fetched successfully',
-    data: classes,
-  })
-})
+    message: "Teacher classes with performance fetched successfully",
+    data: result,
+  });
+});
 
 /******************
  * UPDATE CLASS *
