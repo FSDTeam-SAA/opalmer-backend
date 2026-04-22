@@ -27,7 +27,7 @@ export const createCallLog = catchAsync(async (req: Request, res: Response) => {
     roomId,
     callerId: authUser._id,
     receiverId,
-    callType: callType || 'video',
+    callType: callType || 'audio',
     status: 'ongoing',
     startedAt: new Date()
   })

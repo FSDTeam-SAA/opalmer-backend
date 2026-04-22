@@ -7,7 +7,7 @@ const callLogSchema: Schema<ICallLog> = new Schema(
     callerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     receiverId: { type: Schema.Types.ObjectId, ref: 'User' },
     status: { type: String, enum: ['missed', 'completed', 'ongoing', 'declined', 'cancelled', 'busy'], required: true, default: 'ongoing' },
-    callType: { type: String, enum: ['audio', 'video'], required: true, default: 'video' },
+    callType: { type: String, enum: ['audio', /*'video'*/], required: true, default: 'audio' },
     startedAt: { type: Date, required: true, default: Date.now },
     answeredAt: { type: Date },
     endedAt: { type: Date },
