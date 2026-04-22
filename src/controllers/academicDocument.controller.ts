@@ -5,7 +5,7 @@ import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
-
+//
 const createAcademicDocument = catchAsync(async (req, res) => {
   try {
     const { studentId } = req.body;
