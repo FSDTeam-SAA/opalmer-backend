@@ -4,6 +4,11 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import AppError from "../errors/AppError";
 import { User } from "../models/user.model";
 
+type AuthTokenPayload = JwtPayload & {
+  userId?: string;
+  tokenVersion?: number;
+};
+
 // ✅ Protect route (JWT authentication)
 export const protect = async (
   req: Request,
@@ -17,12 +22,18 @@ export const protect = async (
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || "default_secret"!
-    ) as JwtPayload;
+    ) as AuthTokenPayload;
 
     // Fetch user by ID from token
     const user = await User.findById(decoded.userId); // userId set in login token
     if (!user) {
       throw new AppError(httpStatus.UNAUTHORIZED, "User not found");
+    }
+
+    const currentTokenVersion = user.tokenVersion ?? 0;
+    const decodedTokenVersion = decoded.tokenVersion ?? 0;
+    if (currentTokenVersion !== decodedTokenVersion) {
+      throw new AppError(httpStatus.UNAUTHORIZED, "Session expired");
     }
 
     // Attach user to request

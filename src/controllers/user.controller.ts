@@ -16,6 +16,20 @@ import { uploadToCloudinary } from "../utils/cloudinary";
 import sendEmail from "../utils/sendEmail";
 import sendResponse from "../utils/sendResponse";
 import verificationCodeTemplate from "../utils/verificationCodeTemplate";
+const getTokenVersion = (user: Partial<IUser>) => user.tokenVersion ?? 0;
+
+const signAccessToken = (user: IUser) =>
+  jwt.sign(
+    {
+      userId: user._id,
+      role: user.role,
+      type: user.type,
+      Id: user.Id,
+      tokenVersion: getTokenVersion(user),
+    },
+    process.env.JWT_SECRET || "default_secret",
+    { expiresIn: "7d" },
+  );
 
 // Shared shape for auth + profile responses. Keep this in one place so the
 // login, /me and update endpoints hand the client identical fields.
@@ -173,11 +187,7 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
   }
 
   // Generate JWT token
-  const token = jwt.sign(
-    { userId: user._id, role: user.role, type: user.type, Id: user.Id },
-    process.env.JWT_SECRET || "default_secret",
-    { expiresIn: "7d" },
-  );
+  const token = signAccessToken(user);
 
   if (user.isTwoFactorAuthEnabled) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -238,6 +248,28 @@ export const getMe = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: "Current user fetched successfully",
     data: toPublicUser(user),
+  });
+});
+
+/**********
+ * LOGOUT *
+ **********/
+export const logoutUser = catchAsync(async (req: Request, res: Response) => {
+  const authUser = req.user as unknown as IUser | undefined;
+  if (!authUser?._id) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
+  }
+
+  await User.findByIdAndUpdate(authUser._id, {
+    $inc: { tokenVersion: 1 },
+    $set: { refreshToken: "" },
+  });
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Logout successful",
+    data: null,
   });
 });
 
@@ -645,16 +677,7 @@ export const verifyOTP = catchAsync(async (req: Request, res: Response) => {
   await user.save();
 
   // 🎯 FINAL ACCESS TOKEN (IMPORTANT)
-  const token = jwt.sign(
-    {
-      userId: user._id,
-      role: user.role,
-      type: user.type,
-      Id: user.Id,
-    },
-    process.env.JWT_SECRET!,
-    { expiresIn: "7d" },
-  );
+  const token = signAccessToken(user);
 
   return sendResponse(res, {
     statusCode: httpStatus.OK,

@@ -5,6 +5,14 @@ import catchAsync from '../utils/catchAsync'
 import AppError from '../errors/AppError'
 import { canAccessRoom } from '../utils/chatAccess'
 
+const TERMINAL_STATUSES = new Set([
+  'missed',
+  'completed',
+  'declined',
+  'cancelled',
+  'busy'
+])
+
 export const createCallLog = catchAsync(async (req: Request, res: Response) => {
   const authUser = req.user as any
   const { roomId, receiverId, callType } = req.body
@@ -31,6 +39,33 @@ export const createCallLog = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+export const answerCallLog = catchAsync(async (req: Request, res: Response) => {
+  const authUser = req.user as any
+  const { id } = req.params
+
+  if (!authUser?._id) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated')
+  }
+
+  const callLog = await CallLog.findById(id)
+  if (!callLog) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Call log not found')
+  }
+
+  await canAccessRoom(authUser._id.toString(), callLog.roomId.toString())
+
+  if (!callLog.answeredAt && !TERMINAL_STATUSES.has(callLog.status)) {
+    callLog.answeredAt = new Date()
+    await callLog.save()
+  }
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Call marked as answered',
+    data: callLog
+  })
+})
+
 export const endCallLog = catchAsync(async (req: Request, res: Response) => {
   const authUser = req.user as any
   const { id } = req.params
@@ -43,13 +78,27 @@ export const endCallLog = catchAsync(async (req: Request, res: Response) => {
 
   await canAccessRoom(authUser._id.toString(), callLog.roomId.toString())
 
+  if (TERMINAL_STATUSES.has(callLog.status) && callLog.endedAt) {
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: 'Call log already finalized',
+      data: callLog
+    })
+    return
+  }
+
   callLog.status = status || 'completed'
   callLog.endedAt = new Date()
-  
+
   if (duration !== undefined) {
     callLog.duration = duration
+  } else if (callLog.status === 'completed' && callLog.answeredAt) {
+    callLog.duration = Math.max(
+      0,
+      Math.floor((callLog.endedAt.getTime() - callLog.answeredAt.getTime()) / 1000)
+    )
   } else {
-    callLog.duration = Math.floor((callLog.endedAt.getTime() - callLog.startedAt.getTime()) / 1000)
+    callLog.duration = 0
   }
 
   await callLog.save()
