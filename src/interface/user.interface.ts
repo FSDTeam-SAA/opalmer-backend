@@ -21,6 +21,7 @@ export interface IUser extends Document {
   }
   password_reset_token?: string
   refreshToken?: string
+  tokenVersion?: number
   credit?: number
   fine?: number
   created_at?: Date

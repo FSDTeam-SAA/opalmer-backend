@@ -8,6 +8,7 @@ import {
   getStudentCountByGrade,
   getStudentsByGrade,
   loginUser,
+  logoutUser,
   registerUser,
   searchStudentById,
   toggleTwoFactorAuth,
@@ -24,6 +25,7 @@ router.post("/login", loginUser);
 
 // Current user & password management (token-scoped).
 router.get("/me", protect, getMe);
+router.post("/logout", protect, logoutUser);
 router.post("/change-password", protect, changePassword);
 
 router.get("/administrators", getAllAdministrators);

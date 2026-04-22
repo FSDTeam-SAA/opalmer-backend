@@ -37,6 +37,7 @@ const userSchema: Schema = new Schema<IUser>(
     },
     password_reset_token: { type: String, default: '' },
     refreshToken: { type: String, default: '' },
+    tokenVersion: { type: Number, default: 0 },
     credit: { type: Number, default: null },
     fine: { type: Number },
     schoolId: { type: Schema.Types.ObjectId, ref: 'School', default: null },
