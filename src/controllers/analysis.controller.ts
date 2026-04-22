@@ -3,23 +3,35 @@ import { Attendance } from "../models/attendance.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
+import { Class } from "../models/class.model";
 
 export const getSingleStudentAnalysisController = catchAsync(
   async (req: Request, res: Response) => {
     const { classId, studentId } = req.params;
     const { filter = "weekly" } = req.query;
 
-    // ✅ Check student in class
+    // ✅ Check student in class (Explicit or Grade-based)
     const studentExistInClass = await StuAssignToClass.findOne({
       classId,
       studentId,
     });
 
     if (!studentExistInClass) {
-      return res.status(404).json({
-        success: false,
-        message: "Student not found in this class",
-      });
+      const [student, classData] = await Promise.all([
+        User.findById(studentId),
+        Class.findById(classId),
+      ]);
+
+      if (
+        !student ||
+        !classData ||
+        Number(student.gradeLevel) !== Number(classData.grade)
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: "Student not found in this class",
+        });
+      }
     }
 
     // ✅ Date range

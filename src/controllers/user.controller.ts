@@ -8,7 +8,11 @@ import school from "../models/school.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
+<<<<<<< Updated upstream
 import mongoose from "mongoose";
+=======
+
+>>>>>>> Stashed changes
 import { createNotification } from "../sockets/notification.service";
 import sendEmail from "../utils/sendEmail";
 import sendResponse from "../utils/sendResponse";
@@ -584,20 +588,6 @@ export const getStudentsByGrade = catchAsync(async (req: Request, res: Response)
 export const getStudentsByGradeLevel = catchAsync(
   async (req: Request, res: Response) => {
     const { grade } = req.params;
-
-    const students = await User.find({
-      type: "student",
-      gradeLevel: Number(grade),
-    }).select("username Id phoneNumber gradeLevel age avatar");
-
-    return sendResponse(res, {
-      statusCode: httpStatus.OK,
-      success: true,
-      message: "Students fetched successfully",
-      data: students,
-    });
-  },
-);
 
 export const toggleTwoFactorAuth = catchAsync(
   async (req: Request, res: Response) => {
