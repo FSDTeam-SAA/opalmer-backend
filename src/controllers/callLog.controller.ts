@@ -125,9 +125,9 @@ export const getMyCallLogs = catchAsync(async (req: Request, res: Response) => {
     .sort({ created_at: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate('callerId', 'name avatar type')
-    .populate('receiverId', 'name avatar type')
-    .populate('roomId', 'name avatar type')
+    .populate('callerId', 'username avatar type')
+    .populate('receiverId', 'username avatar type')
+    .populate('roomId', 'username avatar type')
 
   const total = await CallLog.countDocuments({
     $or: [{ callerId: authUser._id }, { receiverId: authUser._id }]
