@@ -14,19 +14,18 @@ const idsEqual = (a: string | Types.ObjectId, b: string | Types.ObjectId) =>
   toObjectId(a).equals(toObjectId(b))
 
 const isTeacherOfStudent = async (teacherId: string, studentId: string) => {
-  const classIds = await Class.find({ teacherId: toObjectId(teacherId) }).distinct(
-    '_id'
-  )
+  const teacherGrades = await Class.find({
+    teacherId: toObjectId(teacherId),
+  }).distinct('grade')
 
-  if (!classIds.length) return false
+  if (!teacherGrades.length) return false
 
-  const assignment = await StuAssignToClass.exists({
-    studentId: toObjectId(studentId),
-    classId: { $in: classIds },
-  })
+  const student = await User.findById(studentId).select('gradeLevel')
+  if (!student || student.gradeLevel === undefined) return false
 
-  return Boolean(assignment)
+  return teacherGrades.includes(student.gradeLevel)
 }
+
 
 const isParentOfStudent = async (parentId: string, studentId: string) => {
   const relation = await ParentsChild.exists({
@@ -185,10 +184,24 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
     }
   }
 
+<<<<<<< Updated upstream
   if (senderType === 'teacher' && recipientType === 'teacher') {
     return { allowed: true }
   }
 
+=======
+  // Same-school messaging for teachers and administrators
+  if (
+    (senderType === 'teacher' || sender.role === 'administrator') &&
+    (recipientType === 'teacher' || recipient.role === 'administrator')
+  ) {
+    if (sender.schoolId && recipient.schoolId && idsEqual(sender.schoolId, recipient.schoolId)) {
+      return { allowed: true };
+    }
+  }
+
+
+>>>>>>> Stashed changes
   return {
     allowed: false,
     reason: `Messaging between ${senderType} and ${recipientType} is not allowed`,
