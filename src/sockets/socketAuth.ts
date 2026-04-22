@@ -8,32 +8,43 @@ type SocketAuthPayload = JwtPayload & {
 }
 
 export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) => void) => {
+  const socketId = socket.id;
+  console.log(`[Socket ${socketId}] Handshake attempt starting...`);
   try {
-    const token = socket.handshake.auth?.token || socket.handshake.headers['authorization']?.split(' ')[1]
+    const token = socket.handshake.auth?.token || socket.handshake.headers['authorization']?.split(' ')[1];
+    
     if (!token) {
-      return next(new Error('Authentication error: Token not found'))
+      console.error(`[Socket ${socketId}] Auth failed: No token provided`);
+      return next(new Error('Authentication error: Token not found'));
     }
 
+    console.log(`[Socket ${socketId}] Token found, verifying JWT...`);
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || 'default_secret'
-    ) as SocketAuthPayload
+    ) as SocketAuthPayload;
 
-    const user = await User.findById(decoded.userId).select('_id type username avatar')
+    console.log(`[Socket ${socketId}] JWT verified for userId: ${decoded.userId}. Fetching user from DB...`);
+    const user = await User.findById(decoded.userId).select('_id type username avatar tokenVersion');
+    
     if (!user) {
-      return next(new Error('Authentication error: User not found'))
+      console.error(`[Socket ${socketId}] Auth failed: User ${decoded.userId} not found in database`);
+      return next(new Error('Authentication error: User not found'));
     }
 
-    const currentTokenVersion = user.tokenVersion ?? 0
-    const decodedTokenVersion = decoded.tokenVersion ?? 0
+    const currentTokenVersion = user.tokenVersion ?? 0;
+    const decodedTokenVersion = decoded.tokenVersion ?? 0;
+    
     if (currentTokenVersion !== decodedTokenVersion) {
-      return next(new Error('Authentication error: Session expired'))
+      console.error(`[Socket ${socketId}] Auth failed: Session expired (version mismatch: ${currentTokenVersion} vs ${decodedTokenVersion})`);
+      return next(new Error('Authentication error: Session expired'));
     }
 
-    // Attach user info to socket
-    (socket as any).user = user
-    next()
+    console.log(`[Socket ${socketId}] Auth SUCCESS for ${user.username}`);
+    (socket as any).user = user;
+    next();
   } catch (err) {
-    next(new Error('Authentication error: Invalid or expired token'))
+    console.error(`[Socket ${socketId}] Auth failed: Unexpected error:`, err);
+    next(new Error('Authentication error: Invalid or expired token'));
   }
 }

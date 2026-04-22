@@ -15,6 +15,7 @@ export const io = new Server(httpserver, {
   cors: {
     origin: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    credentials: true,
   },
 })
 
@@ -24,7 +25,7 @@ setupMessageSocket(io)
 setupWebRTCSocket(io)
 
 connectDB().then(() => {
-  httpserver.listen(PORT, () => {
-    console.log(`Server is running at http://localhost:${PORT}`)
+  httpserver.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`Server is running at http://0.0.0.0:${PORT}`)
   })
 })

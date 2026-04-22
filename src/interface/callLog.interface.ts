@@ -5,8 +5,7 @@ export interface ICallLog extends Document {
   callerId: Types.ObjectId;
   receiverId?: Types.ObjectId;
   status: 'missed' | 'completed' | 'ongoing' | 'declined' | 'cancelled' | 'busy';
-  callType: 'audio' /*| 'video'
-  */;
+  callType: 'audio' | 'video';
   startedAt: Date;
   answeredAt?: Date;
   endedAt?: Date;

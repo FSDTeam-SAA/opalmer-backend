@@ -24,7 +24,7 @@ exports.io.use(socketAuth_1.socketAuthMiddleware);
 (0, message_socket_1.setupMessageSocket)(exports.io);
 (0, webrtc_socket_1.setupWebRTCSocket)(exports.io);
 (0, db_1.connectDB)().then(() => {
-    httpserver.listen(PORT, () => {
-        console.log(`Server is running at http://localhost:${PORT}`);
+    httpserver.listen(Number(PORT), '0.0.0.0', () => {
+        console.log(`Server is running at http://0.0.0.0:${PORT}`);
     });
 });
