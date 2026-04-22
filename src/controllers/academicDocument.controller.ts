@@ -137,8 +137,7 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
         select: "name",
       })
 
-      .sort({ created_at: -1 });
-
+      .sort({ created_at: -1 })
       .populate({
         path: "classId",
         select: "subject grade",
