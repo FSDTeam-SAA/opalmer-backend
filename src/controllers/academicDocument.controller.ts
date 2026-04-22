@@ -102,9 +102,14 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
         select: "username Id gradeLevel",
       })
       .populate({
+        path: "teacherId",
+        select: "username",
+      })
+      .populate({
         path: "schoolId",
         select: "name",
-      });
+      })
+      .sort({ created_at: -1 });
 
     return sendResponse(res, {
       statusCode: 200,
