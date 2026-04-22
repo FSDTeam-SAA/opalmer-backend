@@ -5,8 +5,10 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import { IUser } from "../interface/user.interface";
+import { Attendance } from "../models/attendance.model";
 import { Class } from "../models/class.model";
 import { ParentsChild } from "../models/parentsChild.model";
+import { QuizResult } from "../models/quizResult.model";
 import school from "../models/school.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
@@ -846,3 +848,125 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
     data: formattedContacts,
   });
 });
+
+export const getSingleStudentAllDetails = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    // =====================
+    // 1. Student Basic Info
+    // =====================
+    const studentData = await User.findById(id).select(
+      "username Id phoneNumber gradeLevel age",
+    );
+    if (!studentData) {
+      throw new AppError(404, "Student not found");
+    }
+
+    // =====================
+    // 2. Parent Info
+    // =====================
+    const studentParent = await ParentsChild.findOne({
+      childId: id,
+    }).populate({
+      path: "parentId",
+      select: "username Id phoneNumber email",
+    });
+
+    // =====================
+    // 3. Subjects (with safe populate)
+    // =====================
+    const subjectsRaw = await StuAssignToClass.find({
+      studentId: id,
+    }).populate({
+      path: "classId",
+      select: "grade subject",
+    });
+
+    // ❗ null class remove
+    const subjects = subjectsRaw.filter(
+      (s) => s.classId && (s.classId as any)._id,
+    );
+
+    const classIds = subjects.map((s) => (s.classId as any)._id);
+
+    // =====================
+    // 4. Attendance (ALL)
+    // =====================
+    const attendanceData = await Attendance.find({
+      userId: id,
+      classId: { $in: classIds },
+    });
+
+    const totalAttendance = attendanceData.length;
+
+    const presentCount = attendanceData.filter(
+      (a) => a.status === "present",
+    ).length;
+
+    const overallAttendance = totalAttendance
+      ? Math.round((presentCount / totalAttendance) * 100)
+      : 0;
+
+    // =====================
+    // 5. Quiz Results (ALL)
+    // =====================
+    const quizResults = await QuizResult.find({
+      studentId: id,
+    });
+
+    const totalQuiz = quizResults.length;
+
+    const overallProgress = totalQuiz
+      ? Math.round(
+          quizResults.reduce((sum, q) => sum + (q.percentage || 0), 0) /
+            totalQuiz,
+        )
+      : 0;
+
+    // =====================
+    // 6. Subject-wise Data
+    // =====================
+    const subjectDetails = subjects.map((sub) => {
+      const classDoc = sub.classId as any;
+      const classId = classDoc._id;
+
+      // Attendance per subject
+      const subAttendance = attendanceData.filter(
+        (a) => a.classId.toString() === classId.toString(),
+      );
+
+      const total = subAttendance.length;
+
+      const present = subAttendance.filter(
+        (a) => a.status === "present",
+      ).length;
+
+      const attendancePercent = total ? Math.round((present / total) * 100) : 0;
+
+      return {
+        classId,
+        subject: classDoc.subject || "Unknown",
+        attendance: attendancePercent,
+        progress: overallProgress, // ⚠️ quiz mapping নাই
+      };
+    });
+
+    // =====================
+    // FINAL RESPONSE
+    // =====================
+    res.status(200).json({
+      success: true,
+      message: "Student details fetched successfully",
+      data: {
+        student: studentData,
+        parent: studentParent || null,
+        overall: {
+          attendance: overallAttendance,
+          progress: overallProgress,
+        },
+        subjects: subjectDetails,
+      },
+    });
+  },
+);

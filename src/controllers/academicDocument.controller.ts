@@ -1,7 +1,10 @@
+import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import AcademicDocument from "../models/academicDocument.model";
+import { Class } from "../models/class.model";
 import { ParentsChild } from "../models/parentsChild.model";
 import { User } from "../models/user.model";
+import { createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
@@ -20,6 +23,11 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       throw new AppError(400, "You are not a teacher of any school");
     }
 
+    const teacherClass = await Class.findOne({ teacherId: user._id });
+    if (!teacherClass) {
+      throw new AppError(400, "You are not a teacher of any class");
+    }
+
     const student = await User.findById(studentId);
     if (!student) {
       throw new AppError(400, "Student not found");
@@ -28,7 +36,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
     if (student.type !== "student") {
       throw new AppError(
         400,
-        "You can only upload academic documents for students"
+        "You can only upload academic documents for students",
       );
     }
 
@@ -39,7 +47,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
     if (String(user.schoolId) !== String(student.schoolId)) {
       throw new AppError(
         400,
-        "You can't upload academic documents for a student from another school"
+        "You can't upload academic documents for a student from another school",
       );
     }
 
@@ -58,11 +66,12 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       teacherId: user._id,
       studentId,
       schoolId: user.schoolId,
+      classId: teacherClass._id,
       document,
     });
 
     const populatedDocument = await AcademicDocument.findById(
-      academicDocument._id
+      academicDocument._id,
     )
       .populate({
         path: "studentId",
@@ -76,6 +85,24 @@ const createAcademicDocument = catchAsync(async (req, res) => {
         path: "schoolId",
         select: "name",
       });
+
+    await createNotification({
+      to: new mongoose.Types.ObjectId(student._id as any),
+      message: `New academic document assigned by ${user.username}`,
+      type: "academicDocument",
+      id: academicDocument._id,
+    });
+
+    const adminUsers = await User.findOne({ role: "admin" });
+
+    if (adminUsers) {
+      await createNotification({
+        to: new mongoose.Types.ObjectId(adminUsers._id as any),
+        message: `New academic document created by ${user.username}`,
+        type: "academicDocument",
+        id: academicDocument._id,
+      });
+    }
 
     sendResponse(res, {
       statusCode: 200,
@@ -109,7 +136,14 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
         path: "schoolId",
         select: "name",
       })
+
       .sort({ created_at: -1 });
+
+      .populate({
+        path: "classId",
+        select: "subject grade",
+      });
+
 
     return sendResponse(res, {
       statusCode: 200,
@@ -144,7 +178,7 @@ const getAcademicDocumentForChild = catchAsync(async (req, res) => {
   if (!relation) {
     throw new AppError(
       403,
-      "You are not allowed to view this child's academic documents"
+      "You are not allowed to view this child's academic documents",
     );
   }
 
@@ -257,7 +291,7 @@ const updateAcademicDocument = catchAsync(async (req, res) => {
       {
         document,
       },
-      { new: true }
+      { new: true },
     );
 
     return sendResponse(res, {
@@ -292,12 +326,41 @@ const deleteAcademicDocument = catchAsync(async (req, res) => {
   }
 });
 
+const getDocumentByClass = catchAsync(async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const documents = await AcademicDocument.find({ classId })
+      .populate({
+        path: "studentId",
+        select: "username Id gradeLevel",
+      })
+      .populate({
+        path: "schoolId",
+        select: "name",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Academic documents fetched successfully",
+      data: documents,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const academicDocumentController = {
   createAcademicDocument,
   getAcademicDocumentForStudent,
   getAcademicDocumentForChild,
   getAcademicDocumentForTeacher,
   getSingleAcademicDocument,
+  getDocumentByClass,
   updateAcademicDocument,
   deleteAcademicDocument,
 };
