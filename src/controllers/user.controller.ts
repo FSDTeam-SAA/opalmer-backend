@@ -1,7 +1,5 @@
 import bcrypt from "bcrypt";
-import mongoose from "mongoose";
 import { Request, Response } from "express";
-
 import httpStatus from "http-status";
 import jwt from "jsonwebtoken";
 import AppError from "../errors/AppError";
@@ -10,7 +8,6 @@ import school from "../models/school.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
-
 import mongoose from "mongoose";
 import { createNotification } from "../sockets/notification.service";
 import sendEmail from "../utils/sendEmail";
@@ -584,6 +581,9 @@ export const getStudentsByGrade = catchAsync(async (req: Request, res: Response)
   });
 });
 
+export const getStudentsByGradeLevel = catchAsync(
+  async (req: Request, res: Response) => {
+    const { grade } = req.params;
 
     const students = await User.find({
       type: "student",
