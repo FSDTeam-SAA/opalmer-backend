@@ -1,7 +1,9 @@
+import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import AcademicDocument from "../models/academicDocument.model";
 import { ParentsChild } from "../models/parentsChild.model";
 import { User } from "../models/user.model";
+import { createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
@@ -28,7 +30,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
     if (student.type !== "student") {
       throw new AppError(
         400,
-        "You can only upload academic documents for students"
+        "You can only upload academic documents for students",
       );
     }
 
@@ -39,7 +41,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
     if (String(user.schoolId) !== String(student.schoolId)) {
       throw new AppError(
         400,
-        "You can't upload academic documents for a student from another school"
+        "You can't upload academic documents for a student from another school",
       );
     }
 
@@ -62,7 +64,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
     });
 
     const populatedDocument = await AcademicDocument.findById(
-      academicDocument._id
+      academicDocument._id,
     )
       .populate({
         path: "studentId",
@@ -76,6 +78,24 @@ const createAcademicDocument = catchAsync(async (req, res) => {
         path: "schoolId",
         select: "name",
       });
+
+    await createNotification({
+      to: new mongoose.Types.ObjectId(student._id as any),
+      message: `New academic document assigned by ${user.username}`,
+      type: "academicDocument",
+      id: academicDocument._id,
+    });
+
+    const adminUsers = await User.findOne({ role: "admin" });
+
+    if (adminUsers) {
+      await createNotification({
+        to: new mongoose.Types.ObjectId(adminUsers._id as any),
+        message: `New academic document created by ${user.username}`,
+        type: "academicDocument",
+        id: academicDocument._id,
+      });
+    }
 
     sendResponse(res, {
       statusCode: 200,
@@ -139,7 +159,7 @@ const getAcademicDocumentForChild = catchAsync(async (req, res) => {
   if (!relation) {
     throw new AppError(
       403,
-      "You are not allowed to view this child's academic documents"
+      "You are not allowed to view this child's academic documents",
     );
   }
 
@@ -252,7 +272,7 @@ const updateAcademicDocument = catchAsync(async (req, res) => {
       {
         document,
       },
-      { new: true }
+      { new: true },
     );
 
     return sendResponse(res, {
