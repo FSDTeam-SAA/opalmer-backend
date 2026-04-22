@@ -10,35 +10,38 @@ router.post(
   protect,
   authorizeTypes("teacher"),
   upload.single("document"),
-  academicDocumentController.createAcademicDocument
+  academicDocumentController.createAcademicDocument,
 );
 
 router.get(
   "/student-documents",
   protect,
   authorizeTypes("student"),
-  academicDocumentController.getAcademicDocumentForStudent
+  academicDocumentController.getAcademicDocumentForStudent,
 );
 
 router.get(
   "/child-documents",
   protect,
   authorizeTypes("parent"),
-  academicDocumentController.getAcademicDocumentForChild
+  academicDocumentController.getAcademicDocumentForChild,
 );
 
 router.get(
   "/teacher-documents",
   protect,
   authorizeTypes("teacher"),
-  academicDocumentController.getAcademicDocumentForTeacher
+  academicDocumentController.getAcademicDocumentForTeacher,
+);
+
+router.get(
+  "/class-documents/:classId",
+  academicDocumentController.getDocumentByClass,
 );
 
 router.get(
   "/:academicDocumentId",
-  protect,
-  authorizeTypes("teacher"),
-  academicDocumentController.getSingleAcademicDocument
+  academicDocumentController.getSingleAcademicDocument,
 );
 
 router.put(
@@ -46,14 +49,14 @@ router.put(
   protect,
   authorizeTypes("teacher"),
   upload.single("document"),
-  academicDocumentController.updateAcademicDocument
+  academicDocumentController.updateAcademicDocument,
 );
 
 router.delete(
   "/delete/:id",
   protect,
   authorizeTypes("teacher"),
-  academicDocumentController.deleteAcademicDocument
+  academicDocumentController.deleteAcademicDocument,
 );
 
 const academicDocumentRouter = router;

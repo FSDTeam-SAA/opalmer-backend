@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import AcademicDocument from "../models/academicDocument.model";
+import { Class } from "../models/class.model";
 import { ParentsChild } from "../models/parentsChild.model";
 import { User } from "../models/user.model";
 import { createNotification } from "../sockets/notification.service";
@@ -20,6 +21,11 @@ const createAcademicDocument = catchAsync(async (req, res) => {
 
     if (!user.schoolId) {
       throw new AppError(400, "You are not a teacher of any school");
+    }
+
+    const teacherClass = await Class.findOne({ teacherId: user._id });
+    if (!teacherClass) {
+      throw new AppError(400, "You are not a teacher of any class");
     }
 
     const student = await User.findById(studentId);
@@ -60,6 +66,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       teacherId: user._id,
       studentId,
       schoolId: user.schoolId,
+      classId: teacherClass._id,
       document,
     });
 
@@ -122,9 +129,21 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
         select: "username Id gradeLevel",
       })
       .populate({
+        path: "teacherId",
+        select: "username",
+      })
+      .populate({
         path: "schoolId",
         select: "name",
+      })
+
+      .sort({ created_at: -1 });
+
+      .populate({
+        path: "classId",
+        select: "subject grade",
       });
+
 
     return sendResponse(res, {
       statusCode: 200,
@@ -307,12 +326,41 @@ const deleteAcademicDocument = catchAsync(async (req, res) => {
   }
 });
 
+const getDocumentByClass = catchAsync(async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const documents = await AcademicDocument.find({ classId })
+      .populate({
+        path: "studentId",
+        select: "username Id gradeLevel",
+      })
+      .populate({
+        path: "schoolId",
+        select: "name",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Academic documents fetched successfully",
+      data: documents,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const academicDocumentController = {
   createAcademicDocument,
   getAcademicDocumentForStudent,
   getAcademicDocumentForChild,
   getAcademicDocumentForTeacher,
   getSingleAcademicDocument,
+  getDocumentByClass,
   updateAcademicDocument,
   deleteAcademicDocument,
 };
