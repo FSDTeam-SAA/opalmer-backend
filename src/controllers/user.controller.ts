@@ -1,5 +1,7 @@
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 import { Request, Response } from "express";
+
 import httpStatus from "http-status";
 import jwt from "jsonwebtoken";
 import AppError from "../errors/AppError";
@@ -14,6 +16,10 @@ import { createNotification } from "../sockets/notification.service";
 import sendEmail from "../utils/sendEmail";
 import sendResponse from "../utils/sendResponse";
 import verificationCodeTemplate from "../utils/verificationCodeTemplate";
+import { Class } from "../models/class.model";
+import { StuAssignToClass } from "../models/stuAssignToClass.model";
+import { ParentsChild } from "../models/parentsChild.model";
+
 
 // Shared shape for auth + profile responses. Keep this in one place so the
 // login, /me and update endpoints hand the client identical fields.
@@ -560,9 +566,24 @@ export const getStudentCountByGrade = catchAsync(
 /*********************************
  * GET STUDENTS BY GRADE LEVEL *
  *********************************/
-export const getStudentsByGrade = catchAsync(
-  async (req: Request, res: Response) => {
-    const { grade } = req.params;
+
+export const getStudentsByGrade = catchAsync(async (req: Request, res: Response) => {
+
+  const { grade } = req.params;
+
+  const students = await User.find({
+    type: "student",
+    gradeLevel: Number(grade),
+  }).select("username Id phoneNumber gradeLevel age avatar");
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Students fetched successfully",
+    data: students,
+  });
+});
+
 
     const students = await User.find({
       type: "student",
@@ -688,32 +709,120 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
     query.schoolId = currentUser.schoolId;
   }
 
-  // Role-based filtering logic
-  if (currentUser.type === "teacher") {
-    // Teachers can message everyone in their school (students, parents, other teachers)
-    // No extra filtering needed for now
-  } else if (currentUser.type === "student") {
-    // Students message teachers and other students
-    query.$or = [{ type: "teacher" }, { type: "student" }];
-  } else if (currentUser.type === "parent") {
-    // Parents message teachers
-    query.type = "teacher";
+  // Role/Type-based filtering logic
+  console.log(`getContacts: Current user ${currentUser.username} (Role: ${currentUser.role}, Type: ${currentUser.type})`);
+  
+  if (currentUser.type === 'teacher') {
+    // Teachers can message students in their grades, parents of those students, and other teachers/admins
+    const teacherGrades = await Class.find({ 
+      teacherId: new mongoose.Types.ObjectId(currentUser._id as string) 
+    }).distinct('grade');
+    
+    console.log(`getContacts: Teacher ${currentUser.username} teaches grades:`, teacherGrades);
+
+    const students = await User.find({ 
+      schoolId: currentUser.schoolId,
+      type: 'student',
+      gradeLevel: { $in: teacherGrades }
+    }).select('_id');
+    const studentIds = students.map(s => s._id);
+    
+    const parentChildLinks = await ParentsChild.find({ 
+      childId: { $in: studentIds } 
+    }).populate('childId', 'username');
+
+    const parentToChildMap: Record<string, string[]> = {};
+    parentChildLinks.forEach((link: any) => {
+      if (link.parentId && link.childId) {
+        const pId = link.parentId.toString();
+        const cName = link.childId.username;
+        if (!parentToChildMap[pId]) parentToChildMap[pId] = [];
+        parentToChildMap[pId].push(cName);
+      }
+    });
+
+    const parentIds = Object.keys(parentToChildMap);
+
+    query.$or = [
+      { _id: { $in: studentIds }, type: 'student' },
+      { _id: { $in: parentIds }, type: 'parent' },
+      { type: 'teacher' },
+      { role: 'administrator' }
+    ];
+
+    // Add metadata for mapping later
+    (req as any).parentToChildMap = parentToChildMap;
+
+
+  } else if (currentUser.role === 'administrator') {
+    // Administrators can message anyone in their school
+    // No extra filtering needed beyond schoolId which is already in query
+  } else if (currentUser.type === 'student') {
+    // Students message teachers and other students in their classes
+    const classAssignments = await StuAssignToClass.find({ studentId: currentUser._id }).select('classId');
+    const classIds = classAssignments.map(a => a.classId);
+    
+    const classmateAssignments = await StuAssignToClass.find({ classId: { $in: classIds } }).select('studentId');
+    const classmateIds = classmateAssignments.map(a => a.studentId);
+    
+    const classes = await Class.find({ _id: { $in: classIds } }).select('teacherId');
+    const teacherIds = classes.map(c => c.teacherId);
+
+    query.$or = [
+      { _id: { $in: classmateIds }, type: 'student' },
+      { _id: { $in: teacherIds }, type: 'teacher' },
+      { role: 'administrator' }
+    ];
+  } else if (currentUser.type === 'parent') {
+    // Parents message teachers of their children
+    const childLinks = await ParentsChild.find({ parentId: currentUser._id }).select('childId');
+    const childIds = childLinks.map(l => l.childId);
+    
+    const classAssignments = await StuAssignToClass.find({ studentId: { $in: childIds } }).select('classId');
+    const classIds = classAssignments.map(a => a.classId);
+    
+    const classes = await Class.find({ _id: { $in: classIds } }).select('teacherId');
+    const teacherIds = classes.map(c => c.teacherId);
+
+    query.$or = [
+      { _id: { $in: teacherIds }, type: 'teacher' },
+      { role: 'administrator' }
+    ];
   }
+
+
 
   const contacts = await User.find(query)
     .select("username Id role type avatar phoneNumber email gradeLevel")
     .limit(50);
 
-  const formattedContacts = contacts.map((c) => ({
-    id: c._id,
-    username: c.username,
-    role: c.role,
-    type: c.type,
-    avatar: c.avatar?.url || "",
-    phoneNumber: c.phoneNumber,
-    email: c.email,
-    gradeLevel: c.gradeLevel,
-  }));
+  const formattedContacts = contacts.map(c => {
+    const parentToChildMap = (req as any).parentToChildMap || {};
+    let subtitle: string = c.role;
+
+    
+    if (c.type === 'parent' && parentToChildMap[(c as any)._id.toString()]) {
+      subtitle = `Parent of ${parentToChildMap[(c as any)._id.toString()].join(", ")}`;
+
+    } else if (c.type === 'student') {
+      subtitle = `Student (Grade ${c.gradeLevel || 'N/A'})`;
+    } else if (c.type === 'teacher') {
+      subtitle = `Teacher`;
+    }
+
+    return {
+      id: c._id,
+      username: c.username,
+      role: c.role,
+      type: c.type,
+      subtitle: subtitle,
+      avatar: c.avatar?.url || "",
+      phoneNumber: c.phoneNumber,
+      email: c.email,
+      gradeLevel: c.gradeLevel
+    };
+  });
+
 
   return sendResponse(res, {
     statusCode: httpStatus.OK,

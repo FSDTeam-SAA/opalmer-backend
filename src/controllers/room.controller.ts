@@ -156,10 +156,15 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
     })),
   })
 
+  const populatedRoom = await Room.findById(room._id).populate(
+    'participants.userId',
+    'username avatar type'
+  )
+
   res.status(201).json({
     success: true,
     message: 'Room created successfully',
-    data: room,
+    data: populatedRoom,
   })
 })
 
@@ -238,10 +243,15 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
 
   await room.save()
 
+  const populatedRoom = await Room.findById(room._id).populate(
+    'participants.userId',
+    'username avatar type'
+  )
+
   res.status(200).json({
     success: true,
     message: 'Room updated successfully',
-    data: room,
+    data: populatedRoom,
   })
 })
 
@@ -259,7 +269,10 @@ export const getRoomsByUserId = catchAsync(
 
     const rooms = await Room.find({
       'participants.userId': authUser._id,
-    }).sort({ updated_at: -1 })
+    })
+      .populate('participants.userId', 'username avatar type')
+      .populate('lastMessageId')
+      .sort({ updated_at: -1 })
 
     res.status(200).json({
       success: true,

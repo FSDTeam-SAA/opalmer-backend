@@ -14,19 +14,18 @@ const idsEqual = (a: string | Types.ObjectId, b: string | Types.ObjectId) =>
   toObjectId(a).equals(toObjectId(b))
 
 const isTeacherOfStudent = async (teacherId: string, studentId: string) => {
-  const classIds = await Class.find({ teacherId: toObjectId(teacherId) }).distinct(
-    '_id'
-  )
+  const teacherGrades = await Class.find({
+    teacherId: toObjectId(teacherId),
+  }).distinct('grade')
 
-  if (!classIds.length) return false
+  if (!teacherGrades.length) return false
 
-  const assignment = await StuAssignToClass.exists({
-    studentId: toObjectId(studentId),
-    classId: { $in: classIds },
-  })
+  const student = await User.findById(studentId).select('gradeLevel')
+  if (!student || student.gradeLevel === undefined) return false
 
-  return Boolean(assignment)
+  return teacherGrades.includes(student.gradeLevel)
 }
+
 
 const isParentOfStudent = async (parentId: string, studentId: string) => {
   const relation = await ParentsChild.exists({
@@ -60,18 +59,18 @@ const isTeacherLinkedToParent = async (teacherId: string, parentId: string) => {
   if (!parentChildRows.length) return false
 
   const childIds = parentChildRows.map((row) => row.childId)
-  const classIds = await Class.find({ teacherId: toObjectId(teacherId) }).distinct(
-    '_id'
-  )
+  const teacherGrades = await Class.find({
+    teacherId: toObjectId(teacherId),
+  }).distinct('grade')
 
-  if (!classIds.length) return false
+  if (!teacherGrades.length) return false
 
-  const linked = await StuAssignToClass.exists({
-    studentId: { $in: childIds },
-    classId: { $in: classIds },
+  const linkedStudents = await User.exists({
+    _id: { $in: childIds },
+    gradeLevel: { $in: teacherGrades }
   })
 
-  return Boolean(linked)
+  return Boolean(linkedStudents)
 }
 
 export const canMessageUser = async (senderId: string, recipientId: string) => {
@@ -88,8 +87,8 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
   }
 
   const [sender, recipient] = await Promise.all([
-    User.findById(senderId).select('_id type schoolId isActive'),
-    User.findById(recipientId).select('_id type schoolId isActive'),
+    User.findById(senderId).select('_id type role schoolId isActive'),
+    User.findById(recipientId).select('_id type role schoolId isActive'),
   ])
 
   if (!sender || !recipient) {
@@ -115,13 +114,23 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
   const senderType = sender.type
   const recipientType = recipient.type
 
+  // Administrators can message anyone in their school
+  if (sender.role === 'administrator') {
+    return { allowed: true };
+  }
+
+  // Anyone can message an administrator in their school
+  if (recipient.role === 'administrator') {
+    return { allowed: true };
+  }
+
   if (senderType === 'teacher' && recipientType === 'student') {
     const allowed = await isTeacherOfStudent(senderId, recipientId)
     return {
       allowed,
       reason: allowed
         ? undefined
-        : 'Teacher can only message students from their own classes',
+        : 'Teacher can only message students in their taught grades',
     }
   }
 
@@ -131,7 +140,7 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
       allowed,
       reason: allowed
         ? undefined
-        : 'Student can only message their own class teachers',
+        : 'Student can only message teachers of their grade',
     }
   }
 
@@ -161,7 +170,7 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
       allowed,
       reason: allowed
         ? undefined
-        : 'Teacher can only message parents linked through their students',
+        : 'Teacher can only message parents of students in their grades',
     }
   }
 
@@ -171,7 +180,7 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
       allowed,
       reason: allowed
         ? undefined
-        : 'Parent can only message teachers linked through their children',
+        : 'Parent can only message teachers of their child\'s grade',
     }
   }
 
@@ -183,6 +192,10 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
         ? undefined
         : 'Students can only message classmates from shared classes',
     }
+  }
+
+  if (senderType === 'teacher' && recipientType === 'teacher') {
+    return { allowed: true }
   }
 
   return {
