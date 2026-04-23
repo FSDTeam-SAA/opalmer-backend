@@ -1101,7 +1101,9 @@ export const getSingleTeacherDetails = catchAsync(
     // =====================
     const schoolData = await Class.findOne({
       teacherId: teacherData._id,
-    }).select("_id name address city state phone email logo");
+    }).select(
+      "_id logo subject grade",
+    );
 
     if (!schoolData) {
       throw new AppError(404, "School not found");
