@@ -58,6 +58,12 @@ router.get(
   lessonController.getLessonsByClass
 )
 
+
+router.get(
+  "/student/:studentId",
+  lessonController.getLessonsByStudentId
+);
+
 router.put(
   "/update/:lessonId",
   protect,

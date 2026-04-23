@@ -401,6 +401,35 @@ const getArchivedLessons = catchAsync(async (req, res) => {
   }
 });
 
+const getLessonsByStudentId = catchAsync(async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const result = await Lesson.find({ studentId })
+      .populate({
+        path: "studentId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "teacherId",
+        select: "username email role type",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Student Lessons fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const lessonController = {
   createLesson,
   getLessonsByTeacher,
@@ -412,6 +441,7 @@ const lessonController = {
   getLessonsByClass,
   updateLessonStatus,
   getArchivedLessons,
+  getLessonsByStudentId,
 };
 
 export default lessonController;
