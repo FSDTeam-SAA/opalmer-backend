@@ -34,8 +34,6 @@ router.get(
 
 router.get(
   '/child-progress',
-  // protect,
-  // authorizeTypes('parent'),
   gradingController.getChildProgress
 )
 
