@@ -6,6 +6,7 @@ import {
   getMe,
   getMySchoolAllStudents,
   getMySchoolAllTeachers,
+  getSingleAdministratorAllDetails,
   getSingleStudentAllDetails,
   getStudentCountByGrade,
   getStudentsByGrade,
@@ -60,7 +61,6 @@ router.get("/:id", getSingleStudentAllDetails);
 // Authenticated profile edit. Controller further enforces owner-or-admin
 // authorization using the token-bound user.
 router.put("/:id", protect, upload.single("image"), updateUser);
-
-
+router.get("/administrators/:id", getSingleAdministratorAllDetails);
 
 export default router;

@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { Attendance } from "../models/attendance.model";
+import { Class } from "../models/class.model";
+import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
-import { StuAssignToClass } from "../models/stuAssignToClass.model";
-import { Class } from "../models/class.model";
 
 export const getSingleStudentAnalysisController = catchAsync(
   async (req: Request, res: Response) => {
@@ -38,9 +38,9 @@ export const getSingleStudentAnalysisController = catchAsync(
     let startDate = new Date();
 
     if (filter === "monthly") {
-      startDate.setMonth(startDate.getMonth() - 11); 
+      startDate.setMonth(startDate.getMonth() - 11);
     } else {
-      startDate.setDate(startDate.getDate() - 6); 
+      startDate.setDate(startDate.getDate() - 6);
     }
 
     // ✅ Only THIS student's attendance
@@ -154,7 +154,5 @@ export const getSingleStudentAnalysisController = catchAsync(
     });
   },
 );
-
-
 
 
