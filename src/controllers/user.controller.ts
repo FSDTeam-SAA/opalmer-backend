@@ -911,7 +911,11 @@ export const getSingleStudentAllDetails = catchAsync(
       studentId: id,
     }).populate({
       path: "classId",
-      select: "grade subject",
+      select: "grade subject teacherId",
+      populate: {
+        path: "teacherId",
+        select: "username createdAt avatar type",
+      },
     });
 
     // ❗ null class remove
@@ -980,6 +984,7 @@ export const getSingleStudentAllDetails = catchAsync(
         subject: classDoc.subject || "Unknown",
         attendance: attendancePercent,
         progress: overallProgress,
+        teacher: classDoc.teacherId,
       };
     });
 
@@ -1052,8 +1057,8 @@ export const getSingleAdministratorAllDetails = catchAsync(
       data: {
         admin: adminData,
         school: schoolData,
-        students, // 👈 added here
-        teachers, // 👈 added here
+        students,
+        teachers, 
       },
     });
   },
