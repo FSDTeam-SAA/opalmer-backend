@@ -20,8 +20,6 @@ router.get(
 
 router.get(
   "/student/:studentId",
-  protect,
-  authorizeTypes("teacher"),
   behaviorController.getBehaviorsByStudentId,
 );
 
