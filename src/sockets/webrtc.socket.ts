@@ -72,7 +72,7 @@ const emitToUser = (
   io: Server,
   userId: string,
   event: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ) => {
   const socketIds = userSockets[userId] || []
   socketIds.forEach((socketId) => {
@@ -83,13 +83,13 @@ const emitToUser = (
 const removeSocketFromRoom = (
   socket: Socket,
   roomId: string | null,
-  socketId: string
+  socketId: string,
 ) => {
-  if (!roomId) return null
+  if (!roomId) return
 
   socket.leave(roomId)
 
-  if (!rooms[roomId]) return null
+  if (!rooms[roomId]) return
 
   rooms[roomId] = rooms[roomId].filter((id) => id !== socketId)
   socket.to(roomId).emit('user-left', socketId)
@@ -97,8 +97,6 @@ const removeSocketFromRoom = (
   if (!rooms[roomId].length) {
     delete rooms[roomId]
   }
-
-  return null
 }
 
 export const setupWebRTCSocket = (io: Server) => {
@@ -117,55 +115,72 @@ export const setupWebRTCSocket = (io: Server) => {
 
     let currentRoom: string | null = null
 
-    socket.on('join', async (roomId: string, callback?: (res: Record<string, unknown>) => void) => {
-      try {
-        await canAccessRoom(authUserId, roomId)
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Unable to join call room'
-        if (typeof callback === 'function') {
-          callback({ success: false, error: errorMessage })
+    socket.on(
+      'join',
+      async (
+        roomId: string,
+        callback?: (res: Record<string, unknown>) => void,
+      ) => {
+        try {
+          await canAccessRoom(authUserId, roomId)
+        } catch (err: unknown) {
+          const errorMessage =
+            err instanceof Error ? err.message : 'Unable to join call room'
+          if (typeof callback === 'function') {
+            callback({ success: false, error: errorMessage })
+          }
+          return
         }
-        return
-      }
 
-      currentRoom = removeSocketFromRoom(socket, currentRoom, socket.id)
-      currentRoom = roomId
-      socket.join(roomId)
+        removeSocketFromRoom(socket, currentRoom, socket.id)
+        currentRoom = null
+        currentRoom = roomId
+        socket.join(roomId)
 
-      if (!rooms[roomId]) {
-        rooms[roomId] = []
-      }
+        if (!rooms[roomId]) {
+          rooms[roomId] = []
+        }
 
-      if (!rooms[roomId].includes(socket.id)) {
-        rooms[roomId].push(socket.id)
-      }
+        if (!rooms[roomId].includes(socket.id)) {
+          rooms[roomId].push(socket.id)
+        }
 
-      if (typeof callback === 'function') {
-        callback({ success: true })
-      }
+        if (typeof callback === 'function') {
+          callback({ success: true })
+        }
 
-      const otherUsers = rooms[roomId].filter((id) => id !== socket.id)
-      socket.emit('all-users', otherUsers)
-      socket.to(roomId).emit('user-joined', socket.id)
-    })
+        const otherUsers = rooms[roomId].filter((id) => id !== socket.id)
+        socket.emit('all-users', otherUsers)
+        socket.to(roomId).emit('user-joined', socket.id)
+      },
+    )
 
     socket.on('leave-call', () => {
-      currentRoom = removeSocketFromRoom(socket, currentRoom, socket.id)
+      removeSocketFromRoom(socket, currentRoom, socket.id)
+      currentRoom = null
     })
 
     socket.on(
       'call-user',
-      async (payload: CallInvitePayload, callback?: (res: Record<string, unknown>) => void) => {
+      async (
+        payload: CallInvitePayload,
+        callback?: (res: Record<string, unknown>) => void,
+      ) => {
         try {
+          if (payload.callType && payload.callType !== 'audio') {
+            throw new Error('Audio calls only are supported')
+          }
+
           const room = await canAccessRoom(authUserId, payload.roomId)
-          const isDirectRoom = room.type === 'direct' && room.participants.length === 2
+          const isDirectRoom =
+            room.type === 'direct' && room.participants.length === 2
 
           if (!isDirectRoom) {
             throw new Error('Only direct rooms support calling right now')
           }
 
           const isCalleeParticipant = room.participants.some(
-            (participant) => participant.userId.toString() === payload.calleeId
+            (participant) => participant.userId.toString() === payload.calleeId,
           )
 
           if (!isCalleeParticipant || payload.calleeId === authUserId) {
@@ -174,7 +189,7 @@ export const setupWebRTCSocket = (io: Server) => {
 
           emitToUser(io, payload.calleeId, 'incoming-call', {
             roomId: payload.roomId,
-            callType: payload.callType || 'audio',
+            callType: 'audio',
             callLogId: payload.callLogId || null,
             caller: {
               id: authUserId,
@@ -188,17 +203,21 @@ export const setupWebRTCSocket = (io: Server) => {
             callback({ success: true })
           }
         } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Unable to place call'
+          const errorMessage =
+            err instanceof Error ? err.message : 'Unable to place call'
           if (typeof callback === 'function') {
             callback({ success: false, error: errorMessage })
           }
         }
-      }
+      },
     )
 
     socket.on(
       'accept-call',
-      async (payload: CallResponsePayload, callback?: (res: Record<string, unknown>) => void) => {
+      async (
+        payload: CallResponsePayload,
+        callback?: (res: Record<string, unknown>) => void,
+      ) => {
         try {
           await canAccessRoom(authUserId, payload.roomId)
           emitToUser(io, payload.callerId, 'call-accepted', {
@@ -215,17 +234,21 @@ export const setupWebRTCSocket = (io: Server) => {
             callback({ success: true })
           }
         } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Unable to accept call'
+          const errorMessage =
+            err instanceof Error ? err.message : 'Unable to accept call'
           if (typeof callback === 'function') {
             callback({ success: false, error: errorMessage })
           }
         }
-      }
+      },
     )
 
     socket.on(
       'decline-call',
-      async (payload: CallResponsePayload, callback?: (res: Record<string, unknown>) => void) => {
+      async (
+        payload: CallResponsePayload,
+        callback?: (res: Record<string, unknown>) => void,
+      ) => {
         try {
           await canAccessRoom(authUserId, payload.roomId)
           emitToUser(io, payload.callerId, 'call-declined', {
@@ -242,17 +265,21 @@ export const setupWebRTCSocket = (io: Server) => {
             callback({ success: true })
           }
         } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Unable to decline call'
+          const errorMessage =
+            err instanceof Error ? err.message : 'Unable to decline call'
           if (typeof callback === 'function') {
             callback({ success: false, error: errorMessage })
           }
         }
-      }
+      },
     )
 
     socket.on(
       'end-call',
-      async (payload: CallEndPayload, callback?: (res: Record<string, unknown>) => void) => {
+      async (
+        payload: CallEndPayload,
+        callback?: (res: Record<string, unknown>) => void,
+      ) => {
         try {
           await canAccessRoom(authUserId, payload.roomId)
 
@@ -275,22 +302,27 @@ export const setupWebRTCSocket = (io: Server) => {
             callback({ success: true })
           }
         } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Unable to end call'
+          const errorMessage =
+            err instanceof Error ? err.message : 'Unable to end call'
           if (typeof callback === 'function') {
             callback({ success: false, error: errorMessage })
           }
         }
-      }
+      },
     )
 
     socket.on(
       'sending-signal',
-      (payload: { userToSignal: string; callerId: string; signal: unknown }) => {
+      (payload: {
+        userToSignal: string
+        callerId: string
+        signal: unknown
+      }) => {
         io.to(payload.userToSignal).emit('user-signal', {
           signal: payload.signal,
           callerId: payload.callerId,
         })
-      }
+      },
     )
 
     socket.on(
@@ -300,12 +332,13 @@ export const setupWebRTCSocket = (io: Server) => {
           signal: payload.signal,
           id: socket.id,
         })
-      }
+      },
     )
 
     socket.on('disconnect', () => {
       removeUserSocket(authUserId, socket.id)
-      currentRoom = removeSocketFromRoom(socket, currentRoom, socket.id)
+      removeSocketFromRoom(socket, currentRoom, socket.id)
+      currentRoom = null
     })
   })
 }
