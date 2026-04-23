@@ -2,6 +2,7 @@ import express from "express";
 import {
   changePassword,
   getAllAdministrators,
+  getAllStudent,
   getContacts,
   getMe,
   getMySchoolAllStudents,
@@ -55,6 +56,8 @@ router.post("/verify-otp", protect, verifyOTP);
 router.get("/students/grade/:grade", getStudentsByGrade);
 router.get("/students/count/:grade", getStudentCountByGrade);
 router.get("/contacts", protect, getContacts);
+
+router.get("/students", getAllStudent);
 
 router.get("/:id", getSingleStudentAllDetails);
 
