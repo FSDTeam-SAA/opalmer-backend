@@ -143,7 +143,6 @@ const getAcademicDocumentForStudent = catchAsync(async (req, res) => {
       })
       .sort({ created_at: -1 });
 
-
     return sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -353,6 +352,34 @@ const getDocumentByClass = catchAsync(async (req, res) => {
   }
 });
 
+const getAcademicDocumentByStudentId = catchAsync(async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const documents = await AcademicDocument.find({ studentId })
+      .populate({
+        path: "studentId",
+        select: "username Id gradeLevel",
+      })
+      .populate({
+        path: "schoolId",
+        select: "name",
+      })
+      .populate({
+        path: "classId",
+        select: "subject grade",
+      });
+
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Academic documents fetched successfully",
+      data: documents,
+    });
+  } catch (error) {
+    throw new AppError(500, error as string);
+  }
+});
+
 const academicDocumentController = {
   createAcademicDocument,
   getAcademicDocumentForStudent,
@@ -362,6 +389,7 @@ const academicDocumentController = {
   getDocumentByClass,
   updateAcademicDocument,
   deleteAcademicDocument,
+  getAcademicDocumentByStudentId,
 };
 
 export default academicDocumentController;
