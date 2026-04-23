@@ -8,12 +8,13 @@ const app = express()
 // When credentials are required, browsers reject wildcard origins (`*`).
 // Reflect the request origin instead so credentials can be used safely.
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500',
-  ],
+  //   origin: [
+  //   'http://localhost:3000',
+  //   'http://localhost:3001',
+  //   'http://localhost:5500',
+  //   'http://127.0.0.1:5500',
+  // ],
+  origin: true, // Reflect the request origin
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   // Allow the server to receive cookies and authorization headers
   credentials: true,
