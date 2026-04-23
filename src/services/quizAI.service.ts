@@ -19,7 +19,6 @@ export const generateQuizQuestions = async (topic: string, count = 10) => {
     temperature: 0,
   })
 
-  // console.log(1, completion)
 
   const rawContent = completion.choices[0]?.message?.content || '[]'
   const match = rawContent.match(/\[.*\]/s)

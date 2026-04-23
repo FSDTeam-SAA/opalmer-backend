@@ -826,7 +826,6 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
       { role: "administrator" },
     ];
   } else if (currentUser.type === "parent") {
-    // Parents message teachers of their children
     const childLinks = await ParentsChild.find({
       parentId: currentUser._id,
     }).select("childId");
