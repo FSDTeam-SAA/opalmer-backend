@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import { Behavior } from "../models/behavior.model";
 import { ParentsChild } from "../models/parentsChild.model";
@@ -272,7 +273,10 @@ const getBehaviorsByStudentId = catchAsync(async (req, res) => {
   try {
     const { studentId } = req.params;
 
-    const result = await Behavior.find({ studentId })
+    // =========================
+    // 1. Get all behaviors
+    // =========================
+    const behaviors = await Behavior.find({ studentId })
       .populate({
         path: "studentId",
         select: "username email role type",
@@ -282,14 +286,46 @@ const getBehaviorsByStudentId = catchAsync(async (req, res) => {
         select: "username email role type",
       });
 
+    // =========================
+    // 2. Add per-behavior percentage
+    // =========================
+    const behaviorsWithProgress = behaviors.map((item) => {
+      return {
+        ...item.toObject(),
+        progressPercentage: item.state === "positive" ? 100 : 0,
+      };
+    });
+
+    // =========================
+    // 3. Overall progress (optional summary)
+    // =========================
+    const total = behaviors.length;
+
+    const positiveCount = behaviors.filter(
+      (b) => b.state === "positive",
+    ).length;
+
+    const overallProgress =
+      total === 0 ? 0 : Math.round((positiveCount / total) * 100);
+
+    const progress = {
+      total,
+      positiveCount,
+      progressPercentage: overallProgress,
+    };
+
+    // =========================
+    // 4. Response
+    // =========================
     return sendResponse(res, {
       statusCode: 200,
       success: true,
       message: "Behaviors fetched successfully",
-      data: result,
+      data: behaviorsWithProgress,
+      progress,
     });
-  } catch (error) {
-    throw new AppError(500, error as string);
+  } catch (error: any) {
+    throw new AppError(500, error.message || "Something went wrong");
   }
 });
 
