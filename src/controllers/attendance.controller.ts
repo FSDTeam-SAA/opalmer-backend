@@ -340,7 +340,7 @@ export const getStudentAttendanceStats = catchAsync(async (req, res) => {
 
 export const getSingleStudentSpecificSubjectAttendance = catchAsync(
   async (req, res) => {
-    const { studentId, classId } = req.body;
+    const { studentId, classId } = req.params;
 
     if (!studentId || !classId) {
       throw new AppError(400, "studentId and classId are required");
