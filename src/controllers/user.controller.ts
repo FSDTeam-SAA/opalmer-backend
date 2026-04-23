@@ -1166,3 +1166,15 @@ export const getSingleTeacherDetails = catchAsync(
     });
   },
 );
+
+export const getAllParents = catchAsync(async (req: Request, res: Response) => {
+  const parents = await User.find({ type: "parent" }).select(
+    "username Id phoneNumber email avatar",
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Parents fetched successfully",
+    data: parents,
+  });
+});
