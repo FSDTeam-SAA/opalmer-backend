@@ -13,6 +13,7 @@ type TResponse<T> = {
   message?: string;
   data?: T;
   meta?: meta;
+  progress?: any; // Add this line to include the progress data
 };
 
 const sendResponse = <T>(res: Response, data: TResponse<T>) => {
@@ -21,6 +22,7 @@ const sendResponse = <T>(res: Response, data: TResponse<T>) => {
     message: data.message,
     data: data?.data,
     meta: data?.meta,
+    progress: data?.progress,
   });
 };
 
