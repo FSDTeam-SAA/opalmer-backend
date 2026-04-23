@@ -37,14 +37,14 @@ router.get("/search-student", searchStudentById);
 router.get(
   "/my-students",
   protect,
-  authorizeRoles("administrator"),
+  authorizeRoles("administrator", "admin"),
   getMySchoolAllStudents,
 );
 
 router.get(
   "/my-teachers",
   protect,
-  authorizeRoles("administrator"),
+  authorizeRoles("administrator", "admin"),
   getMySchoolAllTeachers,
 );
 

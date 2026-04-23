@@ -1037,6 +1037,12 @@ export const getSingleAdministratorAllDetails = catchAsync(
       isActive: true,
     }).select("username Id phoneNumber email gradeLevel avatar");
 
+    const teachers = await User.find({
+      schoolId: schoolData._id,
+      type: "teacher",
+      isActive: true,
+    }).select("username Id phoneNumber email avatar");
+
     // =====================
     // FINAL RESPONSE
     // =====================
@@ -1047,6 +1053,7 @@ export const getSingleAdministratorAllDetails = catchAsync(
         admin: adminData,
         school: schoolData,
         students, // 👈 added here
+        teachers, // 👈 added here
       },
     });
   },
