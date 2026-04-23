@@ -40,6 +40,11 @@ router.get(
 );
 
 router.get(
+  "/student/:studentId",
+  academicDocumentController.getAcademicDocumentByStudentId,
+);
+
+router.get(
   "/:academicDocumentId",
   academicDocumentController.getSingleAcademicDocument,
 );
