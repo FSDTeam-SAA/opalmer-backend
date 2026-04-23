@@ -74,6 +74,10 @@ export const authorizeTypes = (...types: string[]) => {
       throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
     }
 
+    if (req.user.role === 'admin' || req.user.role === 'administrator') {
+      return next();
+    }
+
     const userTypes = req.user.type;
     const hasType = types.includes(userTypes);
 

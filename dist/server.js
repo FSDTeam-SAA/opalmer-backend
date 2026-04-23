@@ -18,6 +18,7 @@ exports.io = new socket_io_1.Server(httpserver, {
     cors: {
         origin: true,
         methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+        credentials: true,
     },
 });
 exports.io.use(socketAuth_1.socketAuthMiddleware);
