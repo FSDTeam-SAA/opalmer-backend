@@ -1097,23 +1097,60 @@ export const getSingleTeacherDetails = catchAsync(
     }
 
     // =====================
-    // 2. School Info
+    // 2. CLASSES
     // =====================
-    const schoolData = await Class.findOne({
+    const classData = await Class.find({
       teacherId: teacherData._id,
-    }).select(
-      "_id logo subject grade",
-    );
+    }).select("_id logo subject grade created_at");
 
-    if (!schoolData) {
-      throw new AppError(404, "School not found");
+    if (!classData || classData.length === 0) {
+      throw new AppError(404, "No class found for this teacher");
     }
 
     // =====================
-    // 3. QUIZZES (NEW PART)
+    // 3. ENRICH CLASS WITH ATTENDANCE STATS
     // =====================
-    const quizzes = await Quiz.find({ teacherId: teacherData._id })
-      .populate("classId", "title time") // optional if you want class info
+    const classesWithStats = await Promise.all(
+      classData.map(async (cls) => {
+        const classId = cls._id;
+
+        // total students in this class
+        const totalStudents = await Attendance.distinct("userId", {
+          classId,
+        });
+
+        const totalStudentCount = totalStudents.length;
+
+        // total present records
+        const presentCount = await Attendance.countDocuments({
+          classId,
+          status: "present",
+        });
+
+        // total attendance records
+        const totalAttendance = await Attendance.countDocuments({
+          classId,
+        });
+
+        // percentage calculation
+        const attendancePercentage =
+          totalAttendance === 0 ? 0 : (presentCount / totalAttendance) * 100;
+
+        return {
+          ...cls.toObject(),
+          totalStudents: totalStudentCount,
+          attendancePercentage: Number(attendancePercentage.toFixed(2)),
+        };
+      }),
+    );
+
+    // =====================
+    // 4. QUIZZES
+    // =====================
+    const quizzes = await Quiz.find({
+      teacherId: teacherData._id,
+    })
+      .populate("classId", "subject grade")
       .sort({ created_at: -1 });
 
     // =====================
@@ -1124,8 +1161,8 @@ export const getSingleTeacherDetails = catchAsync(
       message: "Teacher details fetched successfully",
       data: {
         teacher: teacherData,
-        school: schoolData,
-        quizzes, // 👈 added here
+        classes: classesWithStats,
+        quizzes,
       },
     });
   },
