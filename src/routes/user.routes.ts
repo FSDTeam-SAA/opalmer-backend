@@ -9,6 +9,7 @@ import {
   getMySchoolAllTeachers,
   getSingleAdministratorAllDetails,
   getSingleStudentAllDetails,
+  getSingleTeacherDetails,
   getStudentCountByGrade,
   getStudentsByGrade,
   loginUser,
@@ -65,5 +66,6 @@ router.get("/:id", getSingleStudentAllDetails);
 // authorization using the token-bound user.
 router.put("/:id", protect, upload.single("image"), updateUser);
 router.get("/administrators/:id", getSingleAdministratorAllDetails);
+router.get("/teachers/:id", getSingleTeacherDetails);
 
 export default router;

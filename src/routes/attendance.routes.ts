@@ -30,6 +30,9 @@ router.get("/class/:classId/stats", getClassAttendanceStats);
 // * GET STUDENT ATTENDANCE STATS *
 router.get("/student/:studentId/stats", protect, getStudentAttendanceStats);
 
-router.get("/class-attendance", getSingleStudentSpecificSubjectAttendance);
+router.get(
+  "/:studentId/:classId",
+  getSingleStudentSpecificSubjectAttendance,
+);
 
 export default router;
