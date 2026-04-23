@@ -948,7 +948,7 @@ export const getSingleStudentAllDetails = catchAsync(
         classId,
         subject: classDoc.subject || "Unknown",
         attendance: attendancePercent,
-        progress: overallProgress, // ⚠️ quiz mapping নাই
+        progress: overallProgress,
       };
     });
 
@@ -1027,3 +1027,15 @@ export const getSingleAdministratorAllDetails = catchAsync(
     });
   },
 );
+
+export const getAllStudent = catchAsync(async (req: Request, res: Response) => {
+  const students = await User.find({ type: "student" }).select(
+    "username Id phoneNumber email gradeLevel avatar",
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Students fetched successfully",
+    data: students,
+  });
+});
