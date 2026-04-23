@@ -970,3 +970,53 @@ export const getSingleStudentAllDetails = catchAsync(
     });
   },
 );
+
+export const getSingleAdministratorAllDetails = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    // =====================
+    // 1. Administrator Basic Info
+    // =====================
+    const adminData = await User.findById(id).select(
+      "username Id phoneNumber email",
+    );
+
+    if (!adminData) {
+      throw new AppError(404, "Administrator not found");
+    }
+
+    // =====================
+    // 2. School Info
+    // =====================
+    const schoolData = await school
+      .findOne({ administrator: adminData._id })
+      .select("_id name address city state phone email logo");
+
+    if (!schoolData) {
+      throw new AppError(404, "School not found");
+    }
+
+    // =====================
+    // 3. Students under this school (NEW)
+    // =====================
+    const students = await User.find({
+      schoolId: schoolData._id,
+      type: "student",
+      isActive: true,
+    }).select("username Id phoneNumber email gradeLevel avatar");
+
+    // =====================
+    // FINAL RESPONSE
+    // =====================
+    res.status(200).json({
+      success: true,
+      message: "Administrator details fetched successfully",
+      data: {
+        admin: adminData,
+        school: schoolData,
+        students, // 👈 added here
+      },
+    });
+  },
+);
