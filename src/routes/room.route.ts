@@ -4,30 +4,24 @@ import {
   editRoom,
   getRoomsByUserId,
 } from '../controllers/room.controller'
-import { upload } from '../middlewares/multer.middleware' 
+import { upload } from '../middlewares/multer.middleware'
 import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 
 const router = express.Router()
 
-router.post(
-  '/',
-  protect,
-  authorizeTypes('teacher', 'parent', 'student'),
-  upload.single('avatar'),
-  createRoom
-)
+router.post('/', protect, upload.single('avatar'), createRoom)
 router.patch(
   '/:id',
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
   upload.single('avatar'),
-  editRoom
+  editRoom,
 )
 router.get(
   '/my-rooms',
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
-  getRoomsByUserId
+  getRoomsByUserId,
 )
 
 export default router

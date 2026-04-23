@@ -6,7 +6,11 @@ import mongoose from 'mongoose'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import httpStatus from 'http-status'
 import { User } from '../models/user.model'
-import { canCreateDirectRoom, canMessageUser, canAccessRoom } from '../utils/chatAccess'
+import {
+  canCreateDirectRoom,
+  canMessageUser,
+  canAccessRoom,
+} from '../utils/chatAccess'
 
 const parseParticipants = (participants: unknown): string[] => {
   if (!participants) return []
@@ -45,6 +49,7 @@ const parseParticipants = (participants: unknown): string[] => {
 export const createRoom = catchAsync(async (req: Request, res: Response) => {
   const authUser = req.user as any
   const { name } = req.body
+  const isCallMode = req.body.callMode === true || req.body.callMode === 'true'
 
   if (!authUser?._id) {
     throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated')
@@ -60,7 +65,7 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
   ]
 
   const invalidParticipant = normalizedParticipantIds.find(
-    (id) => !mongoose.Types.ObjectId.isValid(id)
+    (id) => !mongoose.Types.ObjectId.isValid(id),
   )
   if (invalidParticipant) {
     throw new AppError(400, 'Invalid participant ID found')
@@ -68,7 +73,9 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
 
   if (
     !normalizedParticipantIds.some((id) =>
-      new mongoose.Types.ObjectId(id).equals(new mongoose.Types.ObjectId(authUser._id))
+      new mongoose.Types.ObjectId(id).equals(
+        new mongoose.Types.ObjectId(authUser._id),
+      ),
     )
   ) {
     normalizedParticipantIds.push(authUser._id.toString())
@@ -93,17 +100,24 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
   const isDirectRoom = normalizedParticipantIds.length === 2
 
   if (isDirectRoom) {
-    await canCreateDirectRoom(authUser._id.toString(), normalizedParticipantIds)
+    if (!isCallMode) {
+      await canCreateDirectRoom(
+        authUser._id.toString(),
+        normalizedParticipantIds,
+      )
+    }
 
     const existingDirectRooms = await Room.find({
       type: 'direct',
       'participants.userId': {
-        $all: normalizedParticipantIds.map((id) => new mongoose.Types.ObjectId(id)),
+        $all: normalizedParticipantIds.map(
+          (id) => new mongoose.Types.ObjectId(id),
+        ),
       },
     })
 
     const existingDirectRoom = existingDirectRooms.find(
-      (room) => room.participants.length === 2
+      (room) => room.participants.length === 2,
     )
 
     if (existingDirectRoom) {
@@ -114,10 +128,17 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
       })
     }
   } else {
+    if (isCallMode) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        'Call mode is only supported for direct rooms',
+      )
+    }
+
     if (authUser.type === 'student') {
       throw new AppError(
         httpStatus.FORBIDDEN,
-        'Students cannot create group rooms'
+        'Students cannot create group rooms',
       )
     }
 
@@ -125,16 +146,20 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
       normalizedParticipantIds
         .filter((id) => id !== authUser._id.toString())
         .map(async (participantId) => {
-          const result = await canMessageUser(authUser._id.toString(), participantId)
+          const result = await canMessageUser(
+            authUser._id.toString(),
+            participantId,
+          )
           return { participantId, ...result }
-        })
+        }),
     )
 
     const blocked = permissionChecks.find((check) => !check.allowed)
     if (blocked) {
       throw new AppError(
         httpStatus.FORBIDDEN,
-        blocked.reason || 'You cannot create this room with the selected participants'
+        blocked.reason ||
+          'You cannot create this room with the selected participants',
       )
     }
   }
@@ -158,7 +183,7 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
 
   const populatedRoom = await Room.findById(room._id).populate(
     'participants.userId',
-    'username avatar type'
+    'username avatar type',
   )
 
   res.status(201).json({
@@ -203,7 +228,7 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
     ]
 
     const invalidParticipant = normalizedParticipantIds.find(
-      (id) => !mongoose.Types.ObjectId.isValid(id)
+      (id) => !mongoose.Types.ObjectId.isValid(id),
     )
     if (invalidParticipant) {
       throw new AppError(400, 'Invalid participant ID found')
@@ -212,13 +237,13 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
     if (
       !normalizedParticipantIds.some((id) =>
         new mongoose.Types.ObjectId(id).equals(
-          new mongoose.Types.ObjectId(authUser._id)
-        )
+          new mongoose.Types.ObjectId(authUser._id),
+        ),
       )
     ) {
       throw new AppError(
         httpStatus.FORBIDDEN,
-        'You cannot remove yourself from a room update'
+        'You cannot remove yourself from a room update',
       )
     }
 
@@ -245,7 +270,7 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
 
   const populatedRoom = await Room.findById(room._id).populate(
     'participants.userId',
-    'username avatar type'
+    'username avatar type',
   )
 
   res.status(200).json({
@@ -254,7 +279,6 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
     data: populatedRoom,
   })
 })
-
 
 /**************************************************************
  * GET ROOMS BY USER ID (ALL ROOMS WHERE USER IS PARTICIPANT) *
@@ -279,5 +303,5 @@ export const getRoomsByUserId = catchAsync(
       results: rooms.length,
       data: rooms,
     })
-  }
+  },
 )
