@@ -2,6 +2,7 @@ import express from "express";
 import {
   changePassword,
   getAllAdministrators,
+  getAllParents,
   getAllStudent,
   getContacts,
   getMe,
@@ -59,6 +60,7 @@ router.get("/students/count/:grade", getStudentCountByGrade);
 router.get("/contacts", protect, getContacts);
 
 router.get("/students", getAllStudent);
+router.get("/parents", getAllParents);
 
 router.get("/:id", getSingleStudentAllDetails);
 
