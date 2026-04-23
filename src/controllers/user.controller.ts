@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
 import httpStatus from "http-status";
@@ -20,27 +19,6 @@ import sendEmail from "../utils/sendEmail";
 import sendResponse from "../utils/sendResponse";
 import verificationCodeTemplate from "../utils/verificationCodeTemplate";
 const getTokenVersion = (user: Partial<IUser>) => user.tokenVersion ?? 0;
-=======
-import bcrypt from 'bcrypt'
-import { Request, Response } from 'express'
-import httpStatus from 'http-status'
-import jwt from 'jsonwebtoken'
-import mongoose from 'mongoose'
-import AppError from '../errors/AppError'
-import { IUser } from '../interface/user.interface'
-import { Class } from '../models/class.model'
-import { ParentsChild } from '../models/parentsChild.model'
-import school from '../models/school.model'
-import { StuAssignToClass } from '../models/stuAssignToClass.model'
-import { User } from '../models/user.model'
-import { createNotification } from '../sockets/notification.service'
-import catchAsync from '../utils/catchAsync'
-import { uploadToCloudinary } from '../utils/cloudinary'
-import sendEmail from '../utils/sendEmail'
-import sendResponse from '../utils/sendResponse'
-import verificationCodeTemplate from '../utils/verificationCodeTemplate'
-const getTokenVersion = (user: Partial<IUser>) => user.tokenVersion ?? 0
->>>>>>> 49ac4a2 (Add ngrok logs and new image uploads)
 
 const signAccessToken = (user: IUser) =>
   jwt.sign(
@@ -899,7 +877,6 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: 'Contacts fetched successfully',
     data: formattedContacts,
-<<<<<<< HEAD
   });
 });
 
@@ -1074,7 +1051,3 @@ export const getSingleAdministratorAllDetails = catchAsync(
     });
   },
 );
-=======
-  })
-})
->>>>>>> 49ac4a2 (Add ngrok logs and new image uploads)
