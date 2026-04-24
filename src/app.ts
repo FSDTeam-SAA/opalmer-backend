@@ -1,61 +1,68 @@
-import cors from 'cors'
-import express from 'express'
-import { globalErrorHandler } from './middlewares/globalErrorHandler'
-import { notFound } from './middlewares/notFound'
-import router from './routes'
-const app = express()
+import cors from "cors";
+import express from "express";
+import { globalErrorHandler } from "./middlewares/globalErrorHandler";
+import { notFound } from "./middlewares/notFound";
+import router from "./routes";
+const app = express();
 
 // When credentials are required, browsers reject wildcard origins (`*`).
 // Reflect the request origin instead so credentials can be used safely.
-const corsOptions = {
-  //   origin: [
-  //   'http://localhost:3000',
-  //   'http://localhost:3001',
-  //   'http://localhost:5500',
-  //   'http://127.0.0.1:5500',
-  // ],
-  origin: true, // Reflect the request origin
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  // Allow the server to receive cookies and authorization headers
-  credentials: true,
-  // Explicitly allow common headers used with JWT and file uploads
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-  ],
-  // Optional: Allows the frontend to read specific headers from the response
-  exposedHeaders: ['set-cookie'],
-  optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-}
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+  "https://opalmer1-dashboard.vercel.app", // ✅ added
+];
 
-app.use(cors(corsOptions))
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: any) {
+    // allow requests with no origin (like mobile apps / postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  credentials: true,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["set-cookie"],
+  optionsSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
 // Ensure preflight requests are handled for all routes
-app.options('/{*any}', cors(corsOptions))
-app.use(express.json())
+app.options("/{*any}", cors(corsOptions));
+app.use(express.json());
 
 app.use((req, res, next) => {
-  next()
-})
+  next();
+});
 
-app.use(express.static('public'))
+app.use(express.static("public"));
 
 // app.get('/', (_req, res) => {
 //   res.json({ success: true, message: 'Opalmer API is running' })
 // })
-app.get('/health', (_req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
     success: true,
-    message: 'Opalmer API is running',
+    message: "Opalmer API is running",
     uptime: process.uptime(),
-  })
-})
+  });
+});
 
-app.use('/api/v1', router)
+app.use("/api/v1", router);
 
-app.use(notFound as never)
-app.use(globalErrorHandler)
+app.use(notFound as never);
+app.use(globalErrorHandler);
 
-export default app
+export default app;
