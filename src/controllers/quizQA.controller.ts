@@ -11,24 +11,51 @@ import sendResponse from '../utils/sendResponse'
  ************************/
 export const createAIQuestions = catchAsync(
   async (req: Request, res: Response) => {
-    const { quizId, topic } = req.body
+    const quizId =
+      typeof req.body?.quizId === 'string' ? req.body.quizId.trim() : ''
+    const topic =
+      typeof req.body?.topic === 'string' ? req.body.topic.trim() : ''
+    const prompt =
+      typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : ''
+    const generationTopic = topic || prompt
 
-    if (!quizId || !topic)
-      throw new AppError(400, 'quizId and topic are required')
+    const requestedCount = Number(req.body?.count)
+    const count =
+      Number.isFinite(requestedCount) && requestedCount > 0
+        ? Math.min(Math.floor(requestedCount), 20)
+        : 10
 
-    const questions = await generateQuizQuestions(topic, 10)
+    if (!generationTopic) {
+      throw new AppError(400, 'topic or prompt is required')
+    }
+
+    const questions = await generateQuizQuestions(generationTopic, count)
     if (!questions.length)
       throw new AppError(500, 'AI failed to generate questions')
 
-    const savedQA = await QuizQA.create({
-      quizId,
-      questions,
-    })
+    // Backward-compatible mode:
+    // if quizId is provided, generate and persist for that quiz.
+    if (quizId) {
+      const savedQA = await QuizQA.create({
+        quizId,
+        questions,
+      })
 
-    res.status(201).json({
+      return sendResponse(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: 'Questions generated and saved successfully',
+        data: savedQA,
+      })
+    }
+
+    // Prompt preview mode:
+    // return plain generated questions so frontend can review/edit before saving.
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
       success: true,
-      message: 'Questions generated and saved successfully',
-      data: savedQA,
+      message: 'Questions generated successfully',
+      data: questions,
     })
   }
 )
