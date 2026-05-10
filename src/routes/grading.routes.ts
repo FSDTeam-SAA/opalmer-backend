@@ -34,7 +34,12 @@ router.get(
   gradingController.getStudentProgress,
 );
 
-router.get("/child-progress", gradingController.getChildProgress);
+router.get(
+  "/child-progress",
+  protect,
+  authorizeTypes("parent"),
+  gradingController.getChildProgress,
+);
 
 router.get(
   "/sessions/:sessionId/results",

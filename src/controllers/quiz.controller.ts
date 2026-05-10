@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose, { PipelineStage, Types } from "mongoose";
 import AppError from "../errors/AppError";
+import { Class } from "../models/class.model";
 import { Quiz } from "../models/quiz.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
@@ -45,6 +46,30 @@ const withQuestionCount = (
   },
   { $project: { qa: 0 } },
 ];
+
+const escapeRegex = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const getAuthorizedStudentId = (req: Request) => {
+  const requester = req.user as any;
+  const targetStudentId = req.params.studentId;
+
+  if (!targetStudentId || !Types.ObjectId.isValid(targetStudentId)) {
+    throw new AppError(400, "Valid studentId is required");
+  }
+
+  if (
+    requester?.type === "student" &&
+    requester?._id?.toString() !== targetStudentId
+  ) {
+    throw new AppError(
+      403,
+      "Students can only access quizzes assigned to their own account",
+    );
+  }
+
+  return targetStudentId;
+};
 
 // Create a new quiz
 export const createQuiz = catchAsync(async (req: Request, res: Response) => {
@@ -180,6 +205,172 @@ export const getQuizzesByTeacher = catchAsync(
     res.status(200).json({
       success: true,
       data: quizzes,
+    });
+  },
+);
+
+export const getQuizzesForStudent = catchAsync(
+  async (req: Request, res: Response) => {
+    const studentId = getAuthorizedStudentId(req);
+    const subjectQuery = req.query.subject?.toString().trim();
+
+    const student = await User.findById(studentId).select(
+      "username email gradeLevel schoolId type",
+    );
+
+    if (!student || student.type !== "student") {
+      throw new AppError(404, "Student not found");
+    }
+
+    if (!student.schoolId || student.gradeLevel === undefined) {
+      return res.status(200).json({
+        success: true,
+        message: "Student quizzes fetched successfully",
+        data: {
+          student,
+          filters: {
+            schoolId: student.schoolId ?? null,
+            gradeLevel: student.gradeLevel ?? null,
+            subject: subjectQuery || null,
+          },
+          quizzes: [],
+        },
+      });
+    }
+
+    const schoolTeacherIds = (await User.find({
+      type: "teacher",
+      schoolId: student.schoolId,
+      isActive: true,
+    }).distinct("_id")) as Types.ObjectId[];
+
+    if (!schoolTeacherIds.length) {
+      return res.status(200).json({
+        success: true,
+        message: "Student quizzes fetched successfully",
+        data: {
+          student,
+          filters: {
+            schoolId: student.schoolId,
+            gradeLevel: student.gradeLevel,
+            subject: subjectQuery || null,
+          },
+          quizzes: [],
+        },
+      });
+    }
+
+    const assignedClassIds = (await StuAssignToClass.find({
+      studentId: new Types.ObjectId(studentId),
+    }).distinct("classId")) as Types.ObjectId[];
+
+    const classFilter: Record<string, any> = {
+      grade: student.gradeLevel,
+      teacherId: { $in: schoolTeacherIds },
+    };
+
+    if (assignedClassIds.length) {
+      classFilter._id = { $in: assignedClassIds };
+    }
+
+    if (subjectQuery) {
+      classFilter.subject = {
+        $regex: escapeRegex(subjectQuery),
+        $options: "i",
+      };
+    }
+
+    const allowedClasses = await Class.find(classFilter).select(
+      "_id grade subject section schedule teacherId",
+    );
+
+    if (!allowedClasses.length) {
+      return res.status(200).json({
+        success: true,
+        message: "Student quizzes fetched successfully",
+        data: {
+          student,
+          filters: {
+            schoolId: student.schoolId,
+            gradeLevel: student.gradeLevel,
+            subject: subjectQuery || null,
+          },
+          quizzes: [],
+        },
+      });
+    }
+
+    const allowedClassIds = allowedClasses.map((classItem) => classItem._id);
+    const classById = new Map(
+      allowedClasses.map((classItem) => [classItem._id.toString(), classItem]),
+    );
+
+    const quizzes = await Quiz.aggregate([
+      {
+        $match: {
+          status: "published",
+          classId: { $in: allowedClassIds },
+          teacherId: { $in: schoolTeacherIds },
+        },
+      },
+      { $sort: { created_at: -1 } },
+      {
+        $lookup: {
+          from: "quizqas",
+          localField: "_id",
+          foreignField: "quizId",
+          as: "qa",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "teacherId",
+          foreignField: "_id",
+          as: "teacher",
+        },
+      },
+      {
+        $addFields: {
+          questionCount: {
+            $size: {
+              $ifNull: [{ $arrayElemAt: ["$qa.questions", 0] }, []],
+            },
+          },
+          teacher: { $arrayElemAt: ["$teacher", 0] },
+        },
+      },
+      { $project: { qa: 0 } },
+    ]);
+
+    const data = quizzes.map((quiz: any) => {
+      const classData = classById.get(quiz.classId.toString());
+      return {
+        ...quiz,
+        class: classData
+          ? {
+              _id: classData._id,
+              grade: classData.grade,
+              subject: classData.subject,
+              section: classData.section,
+              schedule: classData.schedule,
+            }
+          : null,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Student quizzes fetched successfully",
+      data: {
+        student,
+        filters: {
+          schoolId: student.schoolId,
+          gradeLevel: student.gradeLevel,
+          subject: subjectQuery || null,
+        },
+        quizzes: data,
+      },
     });
   },
 );

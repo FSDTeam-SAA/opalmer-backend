@@ -5,32 +5,25 @@ import catchAsync from "../utils/catchAsync";
 import sendResponse from "../utils/sendResponse";
 
 const createSchool = catchAsync(async (req, res) => {
-  try {
-    const { _id: userId } = req.user as any;
+  const { _id: userId } = req.user as any;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new AppError(400, "User not found");
-    }
-
-    if (user.role !== "administrator") {
-      throw new AppError(400, "Only administrators can create a school");
-    }
-
-    const result = await school.create({
-      administrator: userId,
-      ...req.body,
-    });
-
-    return sendResponse(res, {
-      statusCode: 200,
-      success: true,
-      message: "School created successfully",
-      data: result,
-    });
-  } catch (error) {
-    throw new AppError(500, error as string);
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(400, "User not found");
   }
+
+  if (user.role !== "admin") {
+    throw new AppError(403, "Only admins can create a school");
+  }
+
+  const result = await school.create(req.body);
+
+  return sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "School created successfully",
+    data: result,
+  });
 });
 
 const getAllSchools = catchAsync(async (req, res) => {
@@ -80,30 +73,30 @@ const getAllSchools = catchAsync(async (req, res) => {
 });
 
 const getMySchool = catchAsync(async (req, res) => {
-  try {
-    const { _id: userId } = req.user as any;
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new AppError(400, "User not found");
-    }
+  const { _id: userId } = req.user as any;
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(400, "User not found");
+  }
 
-    const result = await school.findOne({ administrator: user._id }).populate({
+  const result = await school
+    .findOne({
+      $or: [{ _id: user.schoolId }, { administrator: user._id }],
+    })
+    .populate({
       path: "administrator",
       select: "username Id role type",
     });
-    if (!result) {
-      throw new AppError(404, "School not found");
-    }
-
-    return sendResponse(res, {
-      statusCode: 200,
-      success: true,
-      message: "School fetched successfully",
-      data: result,
-    });
-  } catch (error) {
-    throw new AppError(500, error as string);
+  if (!result) {
+    throw new AppError(404, "School not found");
   }
+
+  return sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "School fetched successfully",
+    data: result,
+  });
 });
 
 const getSingleSchool = catchAsync(async (req, res) => {

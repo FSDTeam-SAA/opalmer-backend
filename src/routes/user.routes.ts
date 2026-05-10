@@ -1,11 +1,16 @@
 import express from "express";
 import {
   changePassword,
+  createAdministrator,
+  createSchoolParent,
+  createSchoolStudent,
+  createSchoolTeacher,
   getAllAdministrators,
   getAllParents,
   getAllStudent,
   getContacts,
   getMe,
+  getMySchoolAllParents,
   getMySchoolAllStudents,
   getMySchoolAllTeachers,
   getSingleAdministratorAllDetails,
@@ -34,6 +39,13 @@ router.post("/logout", protect, logoutUser);
 router.post("/change-password", protect, changePassword);
 
 router.get("/administrators", getAllAdministrators);
+router.post(
+  "/administrators",
+  protect,
+  authorizeRoles("admin"),
+  upload.single("image"),
+  createAdministrator,
+);
 
 router.get("/search-student", searchStudentById);
 
@@ -49,6 +61,37 @@ router.get(
   protect,
   authorizeRoles("administrator", "admin"),
   getMySchoolAllTeachers,
+);
+
+router.get(
+  "/my-parents",
+  protect,
+  authorizeRoles("administrator", "admin"),
+  getMySchoolAllParents,
+);
+
+router.post(
+  "/school/students",
+  protect,
+  authorizeRoles("administrator"),
+  upload.single("image"),
+  createSchoolStudent,
+);
+
+router.post(
+  "/school/teachers",
+  protect,
+  authorizeRoles("administrator"),
+  upload.single("image"),
+  createSchoolTeacher,
+);
+
+router.post(
+  "/school/parents",
+  protect,
+  authorizeRoles("administrator"),
+  upload.single("image"),
+  createSchoolParent,
 );
 
 router.put("/toggle", protect, toggleTwoFactorAuth);

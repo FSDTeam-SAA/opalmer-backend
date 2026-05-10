@@ -12,6 +12,7 @@ const app = (0, express_1.default)();
 // When credentials are required, browsers reject wildcard origins (`*`).
 // Reflect the request origin instead so credentials can be used safely.
 const allowedOrigins = [
+    "http://localhost:5000",
     "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:5500",
