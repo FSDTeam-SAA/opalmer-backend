@@ -13,18 +13,17 @@ const app = (0, express_1.default)();
 // Reflect the request origin instead so credentials can be used safely.
 const allowedOrigins = [
     "http://localhost:5000",
-    "http://localhost:3000",
     "http://localhost:3001",
-    "http://localhost:5500",
     "http://127.0.0.1:5500",
-    "https://opalmer1-dashboard.vercel.app", // ✅ added
+    "https://admin.classpulse.info",
 ];
 const corsOptions = {
     origin: function (origin, callback) {
         // allow requests with no origin (like mobile apps / postman)
         if (!origin)
             return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
+        const envOrigin = process.env.CORS_ORIGIN;
+        if (allowedOrigins.includes(origin) || (envOrigin && origin === envOrigin)) {
             callback(null, true);
         }
         else {
@@ -45,7 +44,7 @@ const corsOptions = {
 };
 app.use((0, cors_1.default)(corsOptions));
 // Ensure preflight requests are handled for all routes
-app.options("/{*any}", (0, cors_1.default)(corsOptions));
+app.options("(.*)", (0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 app.use((req, res, next) => {
     next();
