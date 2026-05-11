@@ -9,11 +9,8 @@ const app = express();
 // Reflect the request origin instead so credentials can be used safely.
 const allowedOrigins = [
   "http://localhost:5000",
-  "http://localhost:3000",
   "http://localhost:3001",
-  "http://localhost:5500",
   "http://127.0.0.1:5500",
-  "https://opalmer1-dashboard.vercel.app",
   "https://admin.classpulse.info",
 ];
 
