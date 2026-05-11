@@ -13,15 +13,16 @@ const allowedOrigins = [
   "http://localhost:3001",
   "http://localhost:5500",
   "http://127.0.0.1:5500",
-  "https://opalmer1-dashboard.vercel.app", // ✅ added
+  "https://opalmer1-dashboard.vercel.app",
+  "https://admin.classpulse.info",
 ];
 
 const corsOptions = {
   origin: function (origin: string | undefined, callback: any) {
     // allow requests with no origin (like mobile apps / postman)
     if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
+    const envOrigin = process.env.CORS_ORIGIN;
+    if (allowedOrigins.includes(origin) || (envOrigin && origin === envOrigin)) {
       callback(null, true);
     } else {
       callback(new Error("CORS not allowed"));
@@ -41,7 +42,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 // Ensure preflight requests are handled for all routes
-app.options("/{*any}", cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 app.use((req, res, next) => {
