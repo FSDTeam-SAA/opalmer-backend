@@ -31,7 +31,7 @@ export const createParentsChild = catchAsync(
       childId = student._id
     }
 
-    const parent = await User.findById(parentId).select('_id type isActive')
+    const parent = await User.findById(parentId).select('_id type isActive schoolId')
     if (!parent || parent.type !== 'parent' || !parent.isActive) {
       throw new AppError(
         httpStatus.FORBIDDEN,
@@ -39,9 +39,20 @@ export const createParentsChild = catchAsync(
       )
     }
 
-    const childUser = await User.findById(childId).select('_id type isActive')
+    const childUser = await User.findById(childId).select('_id type isActive schoolId')
     if (!childUser || childUser.type !== 'student' || !childUser.isActive) {
       throw new AppError(400, 'Child must be an active student account')
+    }
+
+    if (
+      parent.schoolId &&
+      childUser.schoolId &&
+      parent.schoolId.toString() !== childUser.schoolId.toString()
+    ) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'Parent and child must belong to the same school'
+      )
     }
 
     // Prevent duplicate relation

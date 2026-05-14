@@ -56,6 +56,58 @@ const toPublicUser = (user: IUser) => ({
   isTwoFactorAuthEnabled: user.isTwoFactorAuthEnabled,
 });
 
+const ensureUniqueUsernameAndId = async (username: string, Id: string) => {
+  const existingUsername = await User.findOne({ username });
+  if (existingUsername) {
+    throw new AppError(409, "Username already exists");
+  }
+
+  const existingId = await User.findOne({ Id });
+  if (existingId) {
+    throw new AppError(409, "Id already exists");
+  }
+};
+
+const buildAvatarFromRequest = async (file?: Express.Multer.File) => {
+  if (!file) return { public_id: "", url: "" };
+
+  const uploadResult = await uploadToCloudinary(file.path);
+  if (!uploadResult) return { public_id: "", url: "" };
+
+  return {
+    public_id: uploadResult.public_id,
+    url: uploadResult.secure_url,
+  };
+};
+
+const findAdministratorSchool = async (administratorId: string) => {
+  const administrator = await User.findById(administratorId).select(
+    "role schoolId",
+  );
+  if (!administrator) {
+    throw new AppError(httpStatus.NOT_FOUND, "Administrator not found");
+  }
+  if (administrator.role !== "administrator") {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Only administrators can manage school users",
+    );
+  }
+
+  const adminSchool = administrator.schoolId
+    ? await school.findById(administrator.schoolId)
+    : await school.findOne({ administrator: administrator._id });
+
+  if (!adminSchool) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "No school assigned to this administrator",
+    );
+  }
+
+  return adminSchool;
+};
+
 /*****************
  * REGISTER USER *
  *****************/
@@ -82,27 +134,16 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
-  if (role === "admin") {
-    throw new AppError(400, "You cannot register as an admin.");
-  }
-
-  // Check if username already exists
-  const existingUser = await User.findOne({ username });
-  if (existingUser) {
-    throw new AppError(409, "Username already exists");
+  if (role === "admin" || role === "administrator") {
+    throw new AppError(
+      400,
+      "Admin and administrator accounts must be created by an admin.",
+    );
   }
 
   // Handle image upload
-  let avatar = { public_id: "", url: "" };
-  if (req.file) {
-    const uploadResult = await uploadToCloudinary(req.file.path);
-    if (uploadResult) {
-      avatar = {
-        public_id: uploadResult.public_id,
-        url: uploadResult.secure_url,
-      };
-    }
-  }
+  await ensureUniqueUsernameAndId(username, Id);
+  const avatar = await buildAvatarFromRequest(req.file);
 
   if (type === "student" || role === "teacher") {
     if (!schoolId) {
@@ -361,9 +402,9 @@ export const searchStudentById = catchAsync(
 // Get all administrators
 export const getAllAdministrators = catchAsync(
   async (_req: Request, res: Response) => {
-    const admins = await User.find({ role: "administrator" }).select(
-      "username email phoneNumber type state avatar created_at",
-    );
+    const admins = await User.find({ role: "administrator" })
+      .select("username email phoneNumber type state avatar created_at Id schoolId")
+      .populate("schoolId", "name code email");
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -374,6 +415,114 @@ export const getAllAdministrators = catchAsync(
   },
 );
 
+export const createAdministrator = catchAsync(
+  async (req: Request, res: Response) => {
+    const {
+      username,
+      phoneNumber,
+      Id,
+      age,
+      password,
+      email,
+      schoolId,
+      gender,
+    } = req.body;
+
+    if (!username || !Id || !password || !schoolId) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "username, Id, password, and schoolId are required.",
+      );
+    }
+
+    const targetSchool = await school.findById(schoolId);
+    if (!targetSchool) {
+      throw new AppError(httpStatus.NOT_FOUND, "School not found");
+    }
+
+    if (targetSchool.administrator) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        "This school already has an administrator assigned",
+      );
+    }
+
+    await ensureUniqueUsernameAndId(username, Id);
+    const avatar = await buildAvatarFromRequest(req.file);
+
+    const user = await User.create({
+      username,
+      Id,
+      age,
+      password,
+      avatar,
+      phoneNumber,
+      email,
+      role: "administrator",
+      schoolId: targetSchool._id,
+      gender,
+    });
+
+    targetSchool.administrator = user._id as any;
+    await targetSchool.save();
+
+    return sendResponse(res, {
+      statusCode: httpStatus.CREATED,
+      success: true,
+      message: "Administrator created and assigned to school successfully",
+      data: toPublicUser(user),
+    });
+  },
+);
+
+const createSchoolUserByType = (type: "student" | "teacher" | "parent") =>
+  catchAsync(async (req: Request, res: Response) => {
+    const authUser = req.user as unknown as IUser | undefined;
+    if (!authUser?._id) {
+      throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
+    }
+
+    const { username, phoneNumber, Id, age, password, email, gradeLevel, gender } =
+      req.body;
+
+    if (!username || !Id || !password) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "username, Id, and password are required.",
+      );
+    }
+
+    const adminSchool = await findAdministratorSchool(authUser._id.toString());
+    await ensureUniqueUsernameAndId(username, Id);
+    const avatar = await buildAvatarFromRequest(req.file);
+
+    const user = await User.create({
+      username,
+      Id,
+      age,
+      password,
+      avatar,
+      phoneNumber,
+      email,
+      role: "user",
+      type,
+      gradeLevel: gradeLevel !== undefined ? Number(gradeLevel) : undefined,
+      schoolId: adminSchool._id,
+      gender,
+    });
+
+    return sendResponse(res, {
+      statusCode: httpStatus.CREATED,
+      success: true,
+      message: `${type[0].toUpperCase()}${type.slice(1)} created successfully`,
+      data: toPublicUser(user),
+    });
+  });
+
+export const createSchoolStudent = createSchoolUserByType("student");
+export const createSchoolTeacher = createSchoolUserByType("teacher");
+export const createSchoolParent = createSchoolUserByType("parent");
+
 export const getMySchoolAllStudents = catchAsync(
   async (req: Request, res: Response) => {
     const { _id: userId } = req.user as { _id: string; userId?: string };
@@ -383,17 +532,15 @@ export const getMySchoolAllStudents = catchAsync(
       throw new AppError(404, "User not found");
     }
 
-    const shoolExists = await school
-      .find({ administrator: user._id })
-      .select("_id");
-    if (!shoolExists) {
-      throw new AppError(404, "School not found");
-    }
+    const schoolIds =
+      user.role === "admin"
+        ? (await school.find().select("_id")).map((s) => s._id)
+        : [(await findAdministratorSchool(user._id.toString()))._id];
 
     const students = await User.find({
-      schoolId: { $in: shoolExists.map((s) => s._id) },
+      schoolId: { $in: schoolIds },
       type: "student",
-    }).select("username Id phoneNumber gradeLevel age");
+    }).select("username Id phoneNumber email gradeLevel age avatar state schoolId");
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -413,23 +560,49 @@ export const getMySchoolAllTeachers = catchAsync(
       throw new AppError(404, "User not found");
     }
 
-    const shoolExists = await school
-      .find({ administrator: user._id })
-      .select("_id");
-    if (!shoolExists) {
-      throw new AppError(404, "School not found");
-    }
+    const schoolIds =
+      user.role === "admin"
+        ? (await school.find().select("_id")).map((s) => s._id)
+        : [(await findAdministratorSchool(user._id.toString()))._id];
 
     const teachers = await User.find({
-      schoolId: { $in: shoolExists.map((s) => s._id) },
+      schoolId: { $in: schoolIds },
       type: "teacher",
-    }).select("username Id phoneNumber gradeLevel age");
+    }).select("username Id phoneNumber email gradeLevel age avatar state schoolId");
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
       message: "Teachers fetched successfully",
       data: teachers,
+    });
+  },
+);
+
+export const getMySchoolAllParents = catchAsync(
+  async (req: Request, res: Response) => {
+    const { _id: userId } = req.user as { _id: string; userId?: string };
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError(404, "User not found");
+    }
+
+    const schoolIds =
+      user.role === "admin"
+        ? (await school.find().select("_id")).map((s) => s._id)
+        : [(await findAdministratorSchool(user._id.toString()))._id];
+
+    const parents = await User.find({
+      schoolId: { $in: schoolIds },
+      type: "parent",
+    }).select("username Id phoneNumber email avatar state schoolId");
+
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Parents fetched successfully",
+      data: parents,
     });
   },
 );
@@ -760,7 +933,7 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
   if (currentUser.type === "teacher") {
     // Teachers can message students in their grades, parents of those students, and other teachers/admins
     const teacherGrades = await Class.find({
-      teacherId: new mongoose.Types.ObjectId(currentUser._id as string),
+      teacherId: new mongoose.Types.ObjectId(currentUser._id),
     }).distinct("grade");
 
     console.log(
@@ -958,9 +1131,9 @@ export const getSingleStudentAllDetails = catchAsync(
 
     const overallProgress = totalQuiz
       ? Math.round(
-          quizResults.reduce((sum, q) => sum + (q.percentage || 0), 0) /
-            totalQuiz,
-        )
+        quizResults.reduce((sum, q) => sum + (q.percentage || 0), 0) /
+        totalQuiz,
+      )
       : 0;
 
     // =====================
@@ -1019,7 +1192,7 @@ export const getSingleAdministratorAllDetails = catchAsync(
     // 1. Administrator Basic Info
     // =====================
     const adminData = await User.findById(id).select(
-      "username Id phoneNumber email",
+      "username Id phoneNumber email schoolId",
     );
 
     if (!adminData) {
@@ -1030,7 +1203,9 @@ export const getSingleAdministratorAllDetails = catchAsync(
     // 2. School Info
     // =====================
     const schoolData = await school
-      .findOne({ administrator: adminData._id })
+      .findOne({
+        $or: [{ _id: adminData.schoolId }, { administrator: adminData._id }],
+      })
       .select("_id name address city state phone email logo");
 
     if (!schoolData) {

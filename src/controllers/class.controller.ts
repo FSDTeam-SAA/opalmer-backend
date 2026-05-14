@@ -88,7 +88,7 @@ export const getAllClasses = catchAsync(async (req, res) => {
       const avgQuizScore =
         totalQuiz > 0
           ? quizResults.reduce((sum, q) => sum + (q.percentage ?? 0), 0) /
-            totalQuiz
+          totalQuiz
           : 0;
 
       // ======================
@@ -158,7 +158,7 @@ export const getClassesByTeacher = catchAsync(async (req, res) => {
       const avgQuizScore =
         totalQuiz > 0
           ? quizResults.reduce((sum, q) => sum + (q.percentage ?? 0), 0) /
-            totalQuiz
+          totalQuiz
           : 0;
 
       // ======================
@@ -274,14 +274,35 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
   const { studentId } = req.params;
 
   const student = await User.findById(studentId).select(
-    "gradeLevel username email",
+    "gradeLevel schoolId username email",
   );
 
   if (!student) {
     throw new AppError(httpStatus.NOT_FOUND, "Student not found");
   }
 
-  const rawClasses = await Class.find({ grade: student.gradeLevel }).populate(
+  if (!student.schoolId) {
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: `Classes for student ${student.username} fetched successfully`,
+      data: {
+        student,
+        classes: [],
+      },
+    });
+  }
+
+  const schoolTeacherIds = await User.find({
+    type: "teacher",
+    schoolId: student.schoolId,
+    isActive: true,
+  }).distinct("_id");
+
+  const rawClasses = await Class.find({
+    grade: student.gradeLevel,
+    teacherId: { $in: schoolTeacherIds },
+  }).populate(
     "teacherId",
     "username email avatar",
   );

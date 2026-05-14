@@ -7,7 +7,7 @@ const router = Router();
 router.post(
   "/create",
   protect,
-  authorizeRoles("administrator"),
+  authorizeRoles("admin"),
   schoolController.createSchool
 );
 
