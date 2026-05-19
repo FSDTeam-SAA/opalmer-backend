@@ -68,6 +68,76 @@ const ensureUniqueUsernameAndId = async (username: string, Id: string) => {
   }
 };
 
+const ensureUniqueAdministratorUpdate = async (
+  userId: string,
+  username?: string,
+  Id?: string,
+) => {
+  if (username) {
+    const existingUsername = await User.findOne({
+      username,
+      _id: { $ne: userId },
+    });
+    if (existingUsername) {
+      throw new AppError(409, "Username already exists");
+    }
+  }
+
+  if (Id) {
+    const existingId = await User.findOne({ Id, _id: { $ne: userId } });
+    if (existingId) {
+      throw new AppError(409, "Id already exists");
+    }
+  }
+};
+
+const updateAdministratorSchoolAssignment = async (
+  administratorId: string,
+  currentSchoolId: unknown,
+  nextSchoolId?: string | null,
+) => {
+  if (nextSchoolId === undefined) return undefined;
+
+  const normalizedNextSchoolId = nextSchoolId || null;
+  const currentSchoolIdString = currentSchoolId
+    ? currentSchoolId.toString()
+    : null;
+
+  if (currentSchoolIdString === normalizedNextSchoolId) {
+    return normalizedNextSchoolId;
+  }
+
+  if (normalizedNextSchoolId) {
+    const targetSchool = await school.findById(normalizedNextSchoolId);
+    if (!targetSchool) {
+      throw new AppError(httpStatus.NOT_FOUND, "School not found");
+    }
+
+    if (
+      targetSchool.administrator &&
+      targetSchool.administrator.toString() !== administratorId
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        "This school already has an administrator assigned",
+      );
+    }
+  }
+
+  await school.updateMany(
+    { administrator: administratorId },
+    { $unset: { administrator: "" } },
+  );
+
+  if (normalizedNextSchoolId) {
+    await school.findByIdAndUpdate(normalizedNextSchoolId, {
+      $set: { administrator: administratorId },
+    });
+  }
+
+  return normalizedNextSchoolId;
+};
+
 const buildAvatarFromRequest = async (file?: Express.Multer.File) => {
   if (!file) return { public_id: "", url: "" };
 
@@ -699,20 +769,62 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
+  const targetUser = await User.findById(id).select("+password");
+  if (!targetUser) {
+    return sendResponse(res, {
+      statusCode: httpStatus.NOT_FOUND,
+      success: false,
+      message: "User not found",
+    });
+  }
+
   const updateData: Record<string, any> = { ...req.body };
+  const canAdminManageAdministrator =
+    authUser.role === "admin" && targetUser.role === "administrator";
 
   // Fields clients must never mutate through this endpoint.
   const restrictedFields = [
-    "password",
     "role",
     "refreshToken",
     "verificationInfo",
     "password_reset_token",
     "isActive",
-    "Id",
-    "schoolId",
   ];
   restrictedFields.forEach((field) => delete updateData[field]);
+
+  if (!canAdminManageAdministrator) {
+    delete updateData.password;
+    delete updateData.Id;
+    delete updateData.schoolId;
+  }
+
+  if (canAdminManageAdministrator) {
+    await ensureUniqueAdministratorUpdate(
+      id,
+      updateData.username,
+      updateData.Id,
+    );
+
+    if (updateData.password) {
+      const saltRounds =
+        Number(
+          process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_SALT_ROUND,
+        ) || 10;
+      updateData.password = await bcrypt.hash(updateData.password, saltRounds);
+      updateData.tokenVersion = (targetUser.tokenVersion ?? 0) + 1;
+    } else {
+      delete updateData.password;
+    }
+
+    if ("schoolId" in updateData) {
+      const nextSchoolId = await updateAdministratorSchoolAssignment(
+        id,
+        targetUser.schoolId,
+        updateData.schoolId,
+      );
+      updateData.schoolId = nextSchoolId;
+    }
+  }
 
   // If a new avatar image is uploaded, push it to Cloudinary and merge into avatar
   if (req.file) {
@@ -731,11 +843,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
   }).select("-password -refreshToken -verificationInfo -password_reset_token");
 
   if (!user) {
-    return sendResponse(res, {
-      statusCode: httpStatus.NOT_FOUND,
-      success: false,
-      message: "User not found",
-    });
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   return sendResponse(res, {
