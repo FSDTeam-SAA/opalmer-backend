@@ -1,6 +1,7 @@
 import { Router } from "express";
 import schoolController from "../controllers/school.controller";
 import { authorizeRoles, protect } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 
@@ -8,6 +9,7 @@ router.post(
   "/create",
   protect,
   authorizeRoles("admin"),
+  upload.single("logo"),
   schoolController.createSchool
 );
 

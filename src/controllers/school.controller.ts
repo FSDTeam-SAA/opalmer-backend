@@ -2,6 +2,7 @@ import AppError from "../errors/AppError";
 import school from "../models/school.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
+import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
 
 const createSchool = catchAsync(async (req, res) => {
@@ -16,7 +17,17 @@ const createSchool = catchAsync(async (req, res) => {
     throw new AppError(403, "Only admins can create a school");
   }
 
-  const result = await school.create(req.body);
+  const payload = { ...req.body };
+
+  if (req.file) {
+    const uploadResult = await uploadToCloudinary(req.file.path);
+    if (!uploadResult) {
+      throw new AppError(500, "Failed to upload school logo");
+    }
+    payload.logo = uploadResult.secure_url;
+  }
+
+  const result = await school.create(payload);
 
   return sendResponse(res, {
     statusCode: 201,
