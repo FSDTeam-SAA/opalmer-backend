@@ -160,12 +160,43 @@ const updateSchool = catchAsync(async (req, res) => {
   }
 });
 
+const deleteSchool = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const targetSchool = await school.findById(id);
+  if (!targetSchool) {
+    throw new AppError(404, "School not found");
+  }
+
+  await Promise.all([
+    targetSchool.administrator
+      ? User.findByIdAndUpdate(targetSchool.administrator, {
+          $set: { schoolId: null },
+        })
+      : Promise.resolve(),
+    User.updateMany(
+      { role: "administrator", schoolId: targetSchool._id },
+      { $set: { schoolId: null } }
+    ),
+  ]);
+
+  const result = await school.findByIdAndDelete(id);
+
+  return sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "School deleted successfully",
+    data: result,
+  });
+});
+
 const schoolController = {
   createSchool,
   getAllSchools,
   getMySchool,
   getSingleSchool,
   updateSchool,
+  deleteSchool,
 };
 
 export default schoolController;

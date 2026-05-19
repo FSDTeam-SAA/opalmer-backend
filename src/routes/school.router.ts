@@ -31,5 +31,12 @@ router.put(
   schoolController.updateSchool
 );
 
+router.delete(
+  "/delete/:id",
+  protect,
+  authorizeRoles("admin"),
+  schoolController.deleteSchool
+);
+
 const schoolRouter = router;
 export default schoolRouter;
