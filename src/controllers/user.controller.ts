@@ -1300,7 +1300,7 @@ export const getSingleAdministratorAllDetails = catchAsync(
     // 1. Administrator Basic Info
     // =====================
     const adminData = await User.findById(id).select(
-      "username Id phoneNumber email schoolId",
+      "username Id phoneNumber email role type state gender avatar schoolId isActive created_at updated_at",
     );
 
     if (!adminData) {
@@ -1314,26 +1314,28 @@ export const getSingleAdministratorAllDetails = catchAsync(
       .findOne({
         $or: [{ _id: adminData.schoolId }, { administrator: adminData._id }],
       })
-      .select("_id name address city state phone email logo");
-
-    if (!schoolData) {
-      throw new AppError(404, "School not found");
-    }
+      .select(
+        "_id name code address city state postalCode country phone email establishedYear logo created_at updated_at",
+      );
 
     // =====================
     // 3. Students under this school (NEW)
     // =====================
-    const students = await User.find({
-      schoolId: schoolData._id,
-      type: "student",
-      isActive: true,
-    }).select("username Id phoneNumber email gradeLevel avatar");
+    const students = schoolData
+      ? await User.find({
+          schoolId: schoolData._id,
+          type: "student",
+          isActive: true,
+        }).select("username Id phoneNumber email gradeLevel state avatar")
+      : [];
 
-    const teachers = await User.find({
-      schoolId: schoolData._id,
-      type: "teacher",
-      isActive: true,
-    }).select("username Id phoneNumber email avatar");
+    const teachers = schoolData
+      ? await User.find({
+          schoolId: schoolData._id,
+          type: "teacher",
+          isActive: true,
+        }).select("username Id phoneNumber email state avatar")
+      : [];
 
     // =====================
     // FINAL RESPONSE
