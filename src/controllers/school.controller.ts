@@ -131,8 +131,20 @@ const getSingleSchool = catchAsync(async (req, res) => {
 const updateSchool = catchAsync(async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await school.findByIdAndUpdate(id, req.body, {
+
+    const payload = { ...req.body };
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.path);
+      if (!uploadResult) {
+        throw new AppError(500, "Failed to upload school logo");
+      }
+      payload.logo = uploadResult.secure_url;
+    }
+
+    const result = await school.findByIdAndUpdate(id, payload, {
       new: true,
+      runValidators: true,
     });
     if (!result) {
       throw new AppError(404, "School not found");

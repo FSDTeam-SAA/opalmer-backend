@@ -26,7 +26,8 @@ router.get("/:id", schoolController.getSingleSchool);
 router.put(
   "/update/:id",
   protect,
-  authorizeRoles("administrator"),
+  authorizeRoles("admin", "administrator"),
+  upload.single("logo"),
   schoolController.updateSchool
 );
 
