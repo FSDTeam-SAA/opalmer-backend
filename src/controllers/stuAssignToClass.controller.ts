@@ -1,7 +1,9 @@
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
+import { Class } from "../models/class.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
+import { User } from "../models/user.model";
 import { createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
 import sendResponse from "../utils/sendResponse";
@@ -11,11 +13,51 @@ import sendResponse from "../utils/sendResponse";
  ******************************/
 export const assignStudentToClass = catchAsync(async (req, res) => {
   const { studentId, classId } = req.body;
+  const currentUser = req.user as any;
 
   if (!studentId || !classId) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "studentId and classId are required",
+    );
+  }
+
+  const classInfo = await Class.findById(classId).select("teacherId grade");
+  if (!classInfo) {
+    throw new AppError(httpStatus.NOT_FOUND, "Class not found");
+  }
+
+  if (
+    currentUser?.type === "teacher" &&
+    classInfo.teacherId.toString() !== currentUser._id.toString()
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Teachers can only assign students to their own classes",
+    );
+  }
+
+  const student = await User.findById(studentId).select(
+    "type schoolId gradeLevel",
+  );
+  if (!student || student.type !== "student") {
+    throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+  }
+
+  if (
+    currentUser?.schoolId &&
+    student.schoolId?.toString() !== currentUser.schoolId.toString()
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Teachers can only assign students from their school",
+    );
+  }
+
+  if (student.gradeLevel !== classInfo.grade) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Student grade does not match class grade",
     );
   }
 
@@ -71,6 +113,22 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
  ******************************/
 export const getStudentByClass = catchAsync(async (req, res) => {
   const { classId } = req.params;
+  const currentUser = req.user as any;
+
+  const classInfo = await Class.findById(classId).select("teacherId");
+  if (!classInfo) {
+    throw new AppError(httpStatus.NOT_FOUND, "Class not found");
+  }
+
+  if (
+    currentUser?.type === "teacher" &&
+    classInfo.teacherId.toString() !== currentUser._id.toString()
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Teachers can only view students from their own classes",
+    );
+  }
 
   const assignments = await StuAssignToClass.find({ classId })
     .populate("classId", "grade subject section schedule")
@@ -99,11 +157,28 @@ export const getStudentByClass = catchAsync(async (req, res) => {
  ***************************/
 export const removeStudentFromClass = catchAsync(async (req, res) => {
   const { id } = req.params;
+  const currentUser = req.user as any;
 
-  const deletedAssignment = await StuAssignToClass.findByIdAndDelete(id);
-  if (!deletedAssignment) {
+  const assignment = await StuAssignToClass.findById(id).populate(
+    "classId",
+    "teacherId",
+  );
+  if (!assignment) {
     throw new AppError(httpStatus.NOT_FOUND, "Assignment not found");
   }
+
+  const classInfo = assignment.classId as any;
+  if (
+    currentUser?.type === "teacher" &&
+    classInfo?.teacherId?.toString() !== currentUser._id.toString()
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Teachers can only remove students from their own classes",
+    );
+  }
+
+  await StuAssignToClass.findByIdAndDelete(id);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

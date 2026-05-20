@@ -3,6 +3,7 @@ import gradingController, {
   getSingleStudentGrading,
 } from "../controllers/grading.controller";
 import { authorizeTypes, protect } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 
@@ -46,6 +47,14 @@ router.get(
   protect,
   authorizeTypes("teacher"),
   gradingController.getSessionResults,
+);
+
+router.post(
+  "/question-image",
+  protect,
+  authorizeTypes("teacher"),
+  upload.single("image"),
+  gradingController.uploadQuestionImage,
 );
 
 router.post(

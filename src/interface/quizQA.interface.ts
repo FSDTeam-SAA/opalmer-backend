@@ -4,6 +4,11 @@ export interface IQuestion {
   question: string
   options: string[]
   answer: string
+  explanation?: string
+  difficulty?: 'easy' | 'medium' | 'hard'
+  type?: 'normal' | 'scenario' | 'image' | 'challenge'
+  imagePrompt?: string
+  imageUrl?: string
 }
 
 export interface IQuizQA {

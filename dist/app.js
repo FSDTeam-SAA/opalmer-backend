@@ -43,8 +43,6 @@ const corsOptions = {
     optionsSuccessStatus: 200,
 };
 app.use((0, cors_1.default)(corsOptions));
-// Ensure preflight requests are handled for all routes
-app.options("(.*)", (0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 app.use((req, res, next) => {
     next();

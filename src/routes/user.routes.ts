@@ -16,6 +16,7 @@ import {
   getSingleAdministratorAllDetails,
   getSingleStudentAllDetails,
   getSingleTeacherDetails,
+  getMySchoolStudentsByGrade,
   getStudentCountByGrade,
   getStudentsByGrade,
   loginUser,
@@ -98,6 +99,7 @@ router.put("/toggle", protect, toggleTwoFactorAuth);
 
 router.post("/verify-otp", protect, verifyOTP);
 
+router.get("/my-school/students/grade/:grade", protect, getMySchoolStudentsByGrade);
 router.get("/students/grade/:grade", getStudentsByGrade);
 router.get("/students/count/:grade", getStudentCountByGrade);
 router.get("/contacts", protect, getContacts);

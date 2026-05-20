@@ -6,6 +6,19 @@ const questionSchema = new Schema(
     question: { type: String, required: true },
     options: { type: [String], required: true },
     answer: { type: String, required: true },
+    explanation: { type: String, default: '' },
+    difficulty: {
+      type: String,
+      enum: ['easy', 'medium', 'hard'],
+      default: 'medium',
+    },
+    type: {
+      type: String,
+      enum: ['normal', 'scenario', 'image', 'challenge'],
+      default: 'normal',
+    },
+    imagePrompt: { type: String, default: '' },
+    imageUrl: { type: String, default: '' },
   },
   { _id: false }
 )
