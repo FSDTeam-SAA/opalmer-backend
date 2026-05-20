@@ -5,6 +5,7 @@ import { Attendance } from "../models/attendance.model";
 import { Class } from "../models/class.model";
 import { Quiz } from "../models/quiz.model";
 import { QuizResult } from "../models/quizResult.model";
+import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
 import { createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
@@ -299,13 +300,20 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
     isActive: true,
   }).distinct("_id");
 
-  const rawClasses = await Class.find({
-    grade: student.gradeLevel,
-    teacherId: { $in: schoolTeacherIds },
-  }).populate(
-    "teacherId",
-    "username email avatar",
+  const assignments = await StuAssignToClass.find({ studentId }).select(
+    "classId",
   );
+  const assignedClassIds = assignments.map((assignment) => assignment.classId);
+
+  const rawClasses = assignedClassIds.length
+    ? await Class.find({
+        _id: { $in: assignedClassIds },
+        teacherId: { $in: schoolTeacherIds },
+      }).populate(
+        "teacherId",
+        "username email avatar",
+      )
+    : [];
 
   // Build the last-7-days window aligned to start of today, for weekly progress bucketing
   const now = new Date();

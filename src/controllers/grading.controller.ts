@@ -9,12 +9,18 @@ import { QuizResult } from "../models/quizResult.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
+import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
 
 type QuestionPayload = {
   question: string;
   options: string[];
   answer: string;
+  explanation?: string;
+  difficulty?: "easy" | "medium" | "hard";
+  type?: "normal" | "scenario" | "image" | "challenge";
+  imagePrompt?: string;
+  imageUrl?: string;
 };
 
 const assertObjectId = (id: unknown, label: string) => {
@@ -159,9 +165,27 @@ const validateQuestions = (rawQuestions: unknown): QuestionPayload[] => {
     const item = raw as Partial<QuestionPayload>;
     const question = item.question?.toString().trim();
     const answer = item.answer?.toString().trim();
+    const explanation = item.explanation?.toString().trim() || "";
+    const imagePrompt = item.imagePrompt?.toString().trim() || "";
+    const imageUrl = item.imageUrl?.toString().trim() || "";
     const options = Array.isArray(item.options)
       ? item.options.map((option) => option.toString().trim()).filter(Boolean)
       : [];
+    const difficulty =
+      item.difficulty === "easy" ||
+      item.difficulty === "medium" ||
+      item.difficulty === "hard"
+        ? item.difficulty
+        : "medium";
+    const type =
+      item.type === "normal" ||
+      item.type === "scenario" ||
+      item.type === "image" ||
+      item.type === "challenge"
+        ? item.type
+        : imageUrl || imagePrompt
+          ? "image"
+          : "normal";
 
     if (!question) {
       throw new AppError(
@@ -188,7 +212,16 @@ const validateQuestions = (rawQuestions: unknown): QuestionPayload[] => {
       );
     }
 
-    return { question, options, answer };
+    return {
+      question,
+      options,
+      answer,
+      explanation,
+      difficulty,
+      type,
+      imagePrompt,
+      imageUrl,
+    };
   });
 };
 
@@ -426,6 +459,29 @@ const updateSession = catchAsync(async (req, res) => {
   });
 });
 
+const uploadQuestionImage = catchAsync(async (req, res) => {
+  requireCurrentUserId(req);
+
+  if (!req.file) {
+    throw new AppError(httpStatus.BAD_REQUEST, "image is required");
+  }
+
+  const uploadResult = await uploadToCloudinary(req.file.path);
+  if (!uploadResult) {
+    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to upload image");
+  }
+
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Question image uploaded successfully",
+    data: {
+      url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
+    },
+  });
+});
+
 const publishSession = catchAsync(async (req, res) => {
   const teacherId = requireCurrentUserId(req);
   const session = await ensureTeacherOwnsSession(
@@ -503,6 +559,9 @@ const getQuestions = catchAsync(async (req, res) => {
           questions: qa.questions.map((question) => ({
             question: question.question,
             options: question.options,
+            difficulty: question.difficulty,
+            type: question.type,
+            imageUrl: question.imageUrl,
           })),
         }
       : qa;
@@ -855,6 +914,7 @@ const gradingController = {
   listTeacherSessions,
   getTeacherSession,
   updateSession,
+  uploadQuestionImage,
   publishSession,
   upsertQuestions,
   getQuestions,

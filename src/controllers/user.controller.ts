@@ -897,6 +897,34 @@ export const getStudentsByGrade = catchAsync(
   },
 );
 
+/*********************************
+ * GET MY SCHOOL STUDENTS BY GRADE LEVEL *
+ *********************************/
+export const getMySchoolStudentsByGrade = catchAsync(
+  async (req: Request, res: Response) => {
+    const { grade } = req.params;
+    const currentUser = req.user as any;
+
+    if (!currentUser?.schoolId) {
+      throw new AppError(httpStatus.BAD_REQUEST, "School is required");
+    }
+
+    const students = await User.find({
+      type: "student",
+      gradeLevel: Number(grade),
+      schoolId: currentUser.schoolId,
+      isActive: true,
+    }).select("username Id phoneNumber email gradeLevel age avatar schoolId");
+
+    return sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "School students fetched successfully",
+      data: students,
+    });
+  },
+);
+
 export const toggleTwoFactorAuth = catchAsync(
   async (req: Request, res: Response) => {
     const { _id: userId } = req.user as any;

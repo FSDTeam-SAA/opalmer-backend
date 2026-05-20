@@ -37,6 +37,28 @@ export const uploadToCloudinary = async (localFilePath: string) => {
   }
 };
 
+export const uploadBase64ImageToCloudinary = async (
+  imageBase64: string,
+  folder = "opalmer/quiz-images"
+) => {
+  try {
+    if (!imageBase64) return null;
+
+    const response = await cloudinary.uploader.upload(
+      `data:image/png;base64,${imageBase64}`,
+      {
+        folder,
+        resource_type: "image",
+      }
+    );
+
+    return response;
+  } catch (error: any) {
+    console.error("Cloudinary Base64 Image Upload Error:", error);
+    return null;
+  }
+};
+
 export const deleteFromCloudinary = async (publicId: string) => {
   try {
     if (!publicId) return;

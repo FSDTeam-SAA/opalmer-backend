@@ -28,8 +28,7 @@ export const createClassAttendance = catchAsync(async (req, res) => {
   const endOfDay = new Date(attendanceDate);
   endOfDay.setUTCHours(23, 59, 59, 999);
 
-  // First use explicit class assignments. If the class has no assignment rows,
-  // fall back to the grade-based membership used by /classes/student/:studentId.
+  // Attendance uses the explicit class roster created by teachers.
   const assignments = await StuAssignToClass.find({ classId }).select(
     "studentId",
   );
@@ -37,23 +36,6 @@ export const createClassAttendance = catchAsync(async (req, res) => {
   let studentIds = assignments.map((assignment) =>
     assignment.studentId.toString(),
   );
-
-  if (studentIds.length === 0) {
-    const classInfo = await Class.findById(classId).select("grade");
-
-    if (!classInfo) {
-      throw new AppError(httpStatus.NOT_FOUND, "Class not found");
-    }
-
-    const gradeStudents = await User.find({
-      type: "student",
-      gradeLevel: classInfo.grade,
-      isActive: true,
-    }).select("_id");
-
-    rosterSource = "grade";
-    studentIds = gradeStudents.map((student) => student.id);
-  }
 
   studentIds = Array.from(new Set(studentIds));
 
