@@ -6,7 +6,7 @@ export interface IUser extends Document {
   email?: string
   role: 'user' | 'admin' | 'administrator'
   type: 'parent' | 'student' | 'teacher'
-  Id?: number
+  Id: string
   password: string
   gradeLevel?: number
   state: 'active' | 'inactive' | 'suspended'
@@ -42,21 +42,13 @@ export interface UserModel extends Model<IUser> {
     plainTextPassword: string,
     hashPassword: string
   ): Promise<boolean>
+  isJWTIssuedBeforePasswordChanged(
+    passwordChangeTimeStamp: Date,
+    JwtIssuedTimeStamp: number
+  ): boolean
 }
 
 export type TLoginUser = {
   email: string
   password: string
-}
-export interface UserModel extends Model<IUser> {
-  isUserExistsByEmail(email: string): Promise<IUser>
-  isOTPVerified(id: string): Promise<boolean>
-  isPasswordMatched(
-    plainTextPassword: string,
-    hashPassword: string
-  ): Promise<boolean>
-  isJWTIssuedBeforePasswordChanged(
-    passwordChangeTimeStamp: Date,
-    JwtIssuedTimeStamp: number
-  ): boolean
 }

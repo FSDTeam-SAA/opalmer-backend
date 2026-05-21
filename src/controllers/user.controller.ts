@@ -56,12 +56,7 @@ const toPublicUser = (user: IUser) => ({
   isTwoFactorAuthEnabled: user.isTwoFactorAuthEnabled,
 });
 
-const ensureUniqueUsernameAndId = async (username: string, Id: string) => {
-  const existingUsername = await User.findOne({ username });
-  if (existingUsername) {
-    throw new AppError(409, "Username already exists");
-  }
-
+const ensureUniqueId = async (Id: string) => {
   const existingId = await User.findOne({ Id });
   if (existingId) {
     throw new AppError(409, "Id already exists");
@@ -70,19 +65,8 @@ const ensureUniqueUsernameAndId = async (username: string, Id: string) => {
 
 const ensureUniqueAdministratorUpdate = async (
   userId: string,
-  username?: string,
   Id?: string,
 ) => {
-  if (username) {
-    const existingUsername = await User.findOne({
-      username,
-      _id: { $ne: userId },
-    });
-    if (existingUsername) {
-      throw new AppError(409, "Username already exists");
-    }
-  }
-
   if (Id) {
     const existingId = await User.findOne({ Id, _id: { $ne: userId } });
     if (existingId) {
@@ -212,10 +196,10 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
   }
 
   // Handle image upload
-  await ensureUniqueUsernameAndId(username, Id);
+  await ensureUniqueId(Id);
   const avatar = await buildAvatarFromRequest(req.file);
 
-  if (type === "student" || role === "teacher") {
+  if (type === "student" || type === "teacher") {
     if (!schoolId) {
       throw new AppError(
         400,
@@ -517,7 +501,7 @@ export const createAdministrator = catchAsync(
       );
     }
 
-    await ensureUniqueUsernameAndId(username, Id);
+    await ensureUniqueId(Id);
     const avatar = await buildAvatarFromRequest(req.file);
 
     const user = await User.create({
@@ -563,7 +547,7 @@ const createSchoolUserByType = (type: "student" | "teacher" | "parent") =>
     }
 
     const adminSchool = await findAdministratorSchool(authUser._id.toString());
-    await ensureUniqueUsernameAndId(username, Id);
+    await ensureUniqueId(Id);
     const avatar = await buildAvatarFromRequest(req.file);
 
     const user = await User.create({
@@ -801,7 +785,6 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
   if (canAdminManageAdministrator) {
     await ensureUniqueAdministratorUpdate(
       id,
-      updateData.username,
       updateData.Id,
     );
 
@@ -1351,18 +1334,18 @@ export const getSingleAdministratorAllDetails = catchAsync(
     // =====================
     const students = schoolData
       ? await User.find({
-          schoolId: schoolData._id,
-          type: "student",
-          isActive: true,
-        }).select("username Id phoneNumber email gradeLevel state avatar")
+        schoolId: schoolData._id,
+        type: "student",
+        isActive: true,
+      }).select("username Id phoneNumber email gradeLevel state avatar")
       : [];
 
     const teachers = schoolData
       ? await User.find({
-          schoolId: schoolData._id,
-          type: "teacher",
-          isActive: true,
-        }).select("username Id phoneNumber email state avatar")
+        schoolId: schoolData._id,
+        type: "teacher",
+        isActive: true,
+      }).select("username Id phoneNumber email state avatar")
       : [];
 
     // =====================
