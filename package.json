@@ -29,7 +29,7 @@
     "mongose": "^0.0.2-security",
     "multer": "^2.0.1",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^7.0.3",
+    "nodemailer": "^9.1.1",
     "openai": "^5.12.2",
     "socket.io": "^4.8.1",
     "zod": "^3.25.64"
