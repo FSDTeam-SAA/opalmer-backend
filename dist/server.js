@@ -12,6 +12,7 @@ const http_1 = require("http");
 const message_socket_1 = require("./sockets/message.socket");
 const webrtc_socket_1 = require("./sockets/webrtc.socket");
 const socketAuth_1 = require("./sockets/socketAuth");
+require("dotenv/config");
 const PORT = process.env.PORT || 5000;
 const httpserver = (0, http_1.createServer)(app_1.default);
 exports.io = new socket_io_1.Server(httpserver, {

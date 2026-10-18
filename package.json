@@ -8,7 +8,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "lint": "eslint . --ext .ts",
     "start": "node dist/server.js",
-    "build": "tsc"
+    "build": "tsc",
+    "create:admin": "ts-node src/scripts/create-admin.ts"
   },
   "keywords": [],
   "author": "",
