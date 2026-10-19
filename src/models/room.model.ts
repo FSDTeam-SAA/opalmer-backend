@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from 'mongoose'
 import { IRoom, RoomModel } from '../interface/room.interface'
 
@@ -21,5 +22,7 @@ const roomSchema: Schema<IRoom> = new Schema(
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
+
+roomSchema.plugin(mediaCleanupPlugin, { model: 'Room' });
 
 export const Room = mongoose.model<IRoom, RoomModel>('Room', roomSchema)

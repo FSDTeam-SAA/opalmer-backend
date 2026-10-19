@@ -1,10 +1,11 @@
+import { createNotification } from "../sockets/notification.service";
 import { Request, Response } from 'express'
 import httpStatus from 'http-status'
 import { Message } from '../models/message.model'
 import catchAsync from '../utils/catchAsync'
 import AppError from '../errors/AppError'
 import mongoose from 'mongoose'
-import { io } from '../server'
+import { emitToRoom } from '../services/realtime.service'
 import { uploadToCloudinary } from '../utils/cloudinary' // Adjust path
 import { canAccessRoom } from '../utils/chatAccess'
 import { Room } from '../models/room.model'
@@ -55,7 +56,9 @@ export const createMessage = catchAsync(async (req: Request, res: Response) => {
     lastMessageAt: new Date()
   })
 
-  io.to(roomId).emit('newMessage', newMessage)
+  emitToRoom(roomId, 'newMessage', newMessage)
+  const room = await Room.findById(roomId);
+  await Promise.all((room?.participants ?? []).filter(p => String(p.userId) !== String(authUser._id)).map(p => createNotification({ to: p.userId, type: 'message', id: roomId, message: 'You have a new message.', eventKey: 'message:' + newMessage._id })));
 
   res.status(httpStatus.CREATED).json({
     success: true,
@@ -167,7 +170,7 @@ export const deleteMessage = catchAsync(async (req: Request, res: Response) => {
 
   const deleted = await Message.findByIdAndUpdate(
     messageId,
-    { isDeleted: true, deletedAt: new Date() },
+    { isDeleted: true, deletedAt: new Date(), file: [] },
     { new: true }
   )
 

@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import { Router } from "express";
 import behaviorController from "../controllers/behavior.controller";
 import { authorizeTypes, protect } from "../middlewares/auth.middleware";
@@ -8,61 +9,61 @@ router.post(
   "/create",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.createBehavior,
+  resourceAccess("behavior"), behaviorController.createBehavior,
 );
 
 router.get(
   "/teacher-behaviors",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.getBehaviorByTeacher,
+  resourceAccess("behavior"), behaviorController.getBehaviorByTeacher,
 );
 
 router.get(
   "/student/:studentId",
-  behaviorController.getBehaviorsByStudentId,
+  resourceAccess("behavior"), behaviorController.getBehaviorsByStudentId,
 );
 
 router.get(
   "/student-behaviors",
   protect,
   authorizeTypes("student", "parent"),
-  behaviorController.getBehaviorByStudent
+  resourceAccess("behavior"), behaviorController.getBehaviorByStudent
 );
 
 router.get(
   "/my-child/:studentId",
   protect,
   authorizeTypes("parent"),
-  behaviorController.getBehaviorForMyChild,
+  resourceAccess("behavior"), behaviorController.getBehaviorForMyChild,
 );
 
 router.get(
   "/",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.getAllBehaviors,
+  resourceAccess("behavior"), behaviorController.getAllBehaviors,
 );
 
 router.get(
   "/:behaviorId",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.getSingleBehavior,
+  resourceAccess("behavior"), behaviorController.getSingleBehavior,
 );
 
 router.put(
   "/update/:behaviorId",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.updateBehavior,
+  resourceAccess("behavior"), behaviorController.updateBehavior,
 );
 
 router.delete(
   "/delete/:behaviorId",
   protect,
   authorizeTypes("teacher"),
-  behaviorController.deleteBehavior,
+  resourceAccess("behavior"), behaviorController.deleteBehavior,
 );
 
 const behaviorRouter = router;

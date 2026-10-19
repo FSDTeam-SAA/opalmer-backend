@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from 'express'
 import { upload } from '../middlewares/multer.middleware'
 import { authorizeTypes, protect } from '../middlewares/auth.middleware'
@@ -15,25 +16,25 @@ router.post(
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
   upload.array('files'),
-  createMessage
+  resourceAccess("message"), createMessage
 )
 router.get(
   '/:roomId',
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
-  getMessagesByRoom
+  resourceAccess("message"), getMessagesByRoom
 )
 router.patch(
   '/:messageId',
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
-  updateMessage
+  resourceAccess("message"), updateMessage
 )
 router.delete(
   '/:messageId',
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
-  deleteMessage
+  resourceAccess("message"), deleteMessage
 )
 
 

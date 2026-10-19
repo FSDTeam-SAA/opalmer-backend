@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from 'express'
 import { protect, authorizeTypes } from '../middlewares/auth.middleware'
 import { upload } from '../middlewares/multer.middleware'
@@ -14,10 +15,10 @@ router.post(
   protect,
   authorizeTypes('teacher'),
   upload.array('file'),
-  createGroupWork
+  resourceAccess("group-work"), createGroupWork
 )
 
 // List group homework for a class. Supports ?archived=true|false to scope the list.
-router.get('/class/:classId', getGroupWorkByClass)
+router.get('/class/:classId', resourceAccess("group-work"), getGroupWorkByClass)
 
 export const groupWorkRouter = router

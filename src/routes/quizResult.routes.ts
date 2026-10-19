@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import { Router } from 'express'
 import { protect, authorizeTypes } from '../middlewares/auth.middleware'
 import {
@@ -9,10 +10,10 @@ import {
 
 const router = Router()
 
-router.post('/start', protect, 
+router.post('/start', protect,
   authorizeTypes('student'),
-   startQuiz)
-router.post('/save-progress', protect, saveQuizProgress)
-router.post('/submit', protect, submitQuiz)
-router.get('/answers/:studentId', protect, getQuizAnswersByStudent) 
+   resourceAccess("test/quizzes"), startQuiz)
+router.post('/save-progress', protect, resourceAccess("test/quizzes"), saveQuizProgress)
+router.post('/submit', protect, resourceAccess("test/quizzes"), submitQuiz)
+router.get('/answers/:studentId', protect, resourceAccess("test/quizzes"), getQuizAnswersByStudent)
 export default router

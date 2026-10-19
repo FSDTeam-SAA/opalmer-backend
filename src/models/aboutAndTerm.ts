@@ -8,6 +8,7 @@ const aboutAndTermSchema = new Schema(
       enum: ["about", "terms"],
     },
     description: {
+      maxlength: 100000,
       type: String,
       required: true,
     },

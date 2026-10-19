@@ -6,7 +6,11 @@ export interface IHomework extends Document {
   title: string
   description?: string
   dueDate?: Date
-  file: string[]
+  file: any[]
+  status?: "draft" | "published"
+  pointsPossible?: number
+  studentIds?: Types.ObjectId[]
+  standards?: string[]
   archived: boolean
   created_at?: Date
   updated_at?: Date

@@ -12,6 +12,8 @@ const stuAssignToClassSchema: Schema<IStuAssignToClass> = new Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
 
+stuAssignToClassSchema.index({ studentId: 1, classId: 1 }, { unique: true });
+
 export const StuAssignToClass = mongoose.model<
   IStuAssignToClass,
   StuAssignToClassModel

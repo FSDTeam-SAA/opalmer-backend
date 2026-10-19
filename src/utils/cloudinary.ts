@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import config from "../config/config";
+import { recordUploadedAsset } from '../services/uploadContext.service';
 
 cloudinary.config({
   cloud_name: config.cloudinary.cloudName,
@@ -18,11 +19,12 @@ export const uploadToCloudinary = async (localFilePath: string) => {
     // console.log("📤 Uploading file to Cloudinary:", localFilePath);
 
     const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "raw",
+      resource_type: /\.(jpe?g|png|webp)$/i.test(localFilePath) ? "image" : /\.(mp4|webm|mov|mp3|m4a|wav|ogg)$/i.test(localFilePath) ? "video" : "raw",
     });
 
     // console.log("✅ Upload Success:", response);
 
+    recordUploadedAsset(response.secure_url);
     fs.unlinkSync(localFilePath);
 
     return response;
@@ -52,6 +54,7 @@ export const uploadBase64ImageToCloudinary = async (
       }
     );
 
+    recordUploadedAsset(response.secure_url);
     return response;
   } catch (error: any) {
     console.error("Cloudinary Base64 Image Upload Error:", error);
@@ -59,11 +62,9 @@ export const uploadBase64ImageToCloudinary = async (
   }
 };
 
-export const deleteFromCloudinary = async (publicId: string) => {
-  try {
-    if (!publicId) return;
-    await cloudinary.uploader.destroy(publicId);
-  } catch (error) {
-    console.error("Error deleting from Cloudinary:", error);
-  }
+export const deleteFromCloudinary = async (publicId: string, resourceType: 'image' | 'video' | 'raw' = 'image', deliveryType: 'upload' | 'private' | 'authenticated' = 'upload') => {
+  if (!publicId) return;
+  const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType, type: deliveryType, invalidate: true });
+  if (result.result !== 'ok' && result.result !== 'not found') throw new Error('Cloudinary did not confirm deletion');
+  return result;
 };

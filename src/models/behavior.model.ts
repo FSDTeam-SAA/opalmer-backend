@@ -6,7 +6,12 @@ const behaviorSchema: Schema<IBehavior> = new Schema(
     teacherId: { type: Schema.Types.ObjectId, ref: "User" },
     studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     message: { type: String, required: true },
-    state: { type: String, enum: ["positive", "negative"], required: true },
+    tags: { type: [String], default: [] },
+    points: { type: Number, default: 0 },
+    severity: { type: String, enum: ["normal", "urgent"], default: "normal" },
+    parentVisible: { type: Boolean, default: true },
+    classId: { type: Schema.Types.ObjectId, ref: "Class" },
+    state: { type: String, enum: ["positive", "neutral", "corrective", "negative"], required: true },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

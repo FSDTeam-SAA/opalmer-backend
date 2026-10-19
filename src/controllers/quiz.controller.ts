@@ -1,3 +1,4 @@
+import { visibleClassIds } from "../services/access.service";
 import { Request, Response } from "express";
 import mongoose, { PipelineStage, Types } from "mongoose";
 import AppError from "../errors/AppError";
@@ -32,6 +33,7 @@ const withQuestionCount = (
       localField: "teacherId",
       foreignField: "_id",
       as: "teacher",
+      pipeline: [{ $project: { username: 1, Id: 1, avatar: 1, type: 1 } }],
     },
   },
   {
@@ -156,8 +158,8 @@ export const updateQuiz = catchAsync(async (req: Request, res: Response) => {
 
 // Get all quizzes
 export const getAllQuizzes = catchAsync(
-  async (_req: Request, res: Response) => {
-    const quizzes = await Quiz.aggregate(withQuestionCount({}));
+  async (req: Request, res: Response) => {
+    const quizzes = await Quiz.aggregate(withQuestionCount({ classId: { $in: await visibleClassIds(req.user) } }));
     res.status(200).json({
       success: true,
       data: quizzes,
@@ -269,9 +271,7 @@ export const getQuizzesForStudent = catchAsync(
       teacherId: { $in: schoolTeacherIds },
     };
 
-    if (assignedClassIds.length) {
-      classFilter._id = { $in: assignedClassIds };
-    }
+    classFilter._id = { $in: assignedClassIds };
 
     if (subjectQuery) {
       classFilter.subject = {
@@ -328,6 +328,7 @@ export const getQuizzesForStudent = catchAsync(
           localField: "teacherId",
           foreignField: "_id",
           as: "teacher",
+          pipeline: [{ $project: { username: 1, Id: 1, avatar: 1, type: 1 } }],
         },
       },
       {

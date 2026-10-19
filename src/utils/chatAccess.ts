@@ -14,18 +14,9 @@ const idsEqual = (a: string | Types.ObjectId, b: string | Types.ObjectId) =>
   toObjectId(a).equals(toObjectId(b))
 
 const isTeacherOfStudent = async (teacherId: string, studentId: string) => {
-  const teacherGrades = await Class.find({
-    teacherId: toObjectId(teacherId),
-  }).distinct('grade')
-
-  if (!teacherGrades.length) return false
-
-  const student = await User.findById(studentId).select('gradeLevel')
-  if (!student || student.gradeLevel === undefined) return false
-
-  return teacherGrades.includes(student.gradeLevel)
+  const classes = await Class.find({ teacherId }).distinct('_id')
+  return Boolean(await StuAssignToClass.exists({ studentId, classId: { $in: classes } }))
 }
-
 
 const isParentOfStudent = async (parentId: string, studentId: string) => {
   const relation = await ParentsChild.exists({
@@ -52,25 +43,9 @@ const doStudentsShareClass = async (studentAId: string, studentBId: string) => {
 }
 
 const isTeacherLinkedToParent = async (teacherId: string, parentId: string) => {
-  const parentChildRows = await ParentsChild.find({
-    parentId: toObjectId(parentId),
-  }).select('childId')
-
-  if (!parentChildRows.length) return false
-
-  const childIds = parentChildRows.map((row) => row.childId)
-  const teacherGrades = await Class.find({
-    teacherId: toObjectId(teacherId),
-  }).distinct('grade')
-
-  if (!teacherGrades.length) return false
-
-  const linkedStudents = await User.exists({
-    _id: { $in: childIds },
-    gradeLevel: { $in: teacherGrades }
-  })
-
-  return Boolean(linkedStudents)
+  const children = await ParentsChild.find({ parentId }).distinct('childId')
+  const classes = await Class.find({ teacherId }).distinct('_id')
+  return Boolean(await StuAssignToClass.exists({ studentId: { $in: children }, classId: { $in: classes } }))
 }
 
 export const canMessageUser = async (senderId: string, recipientId: string) => {

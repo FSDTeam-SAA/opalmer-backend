@@ -1,9 +1,13 @@
+import { visibleStudentIds } from '../services/access.service';
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import { Class } from "../models/class.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
+import { Quiz } from "../models/quiz.model";
+import { QuizResult } from "../models/quizResult.model";
+import { summarizePerformance } from "../services/classMetrics.service";
 import { createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
 import sendResponse from "../utils/sendResponse";
@@ -130,11 +134,11 @@ export const getStudentByClass = catchAsync(async (req, res) => {
     );
   }
 
-  const assignments = await StuAssignToClass.find({ classId })
+  const assignments = await StuAssignToClass.find({ classId, ...(["student", "parent"].includes(currentUser.type) ? { studentId: { $in: await visibleStudentIds(currentUser) } } : {}) })
     .populate("classId", "grade subject section schedule")
     .populate(
       "studentId",
-      "-password_reset_token -refreshToken -verificationInfo",
+      "username Id gradeLevel age avatar type email phoneNumber state isActive gender",
     );
 
   if (!assignments) {
@@ -144,11 +148,26 @@ export const getStudentByClass = catchAsync(async (req, res) => {
     );
   }
 
+  const staff = currentUser.type === "teacher" || ["admin", "administrator"].includes(currentUser.role);
+  const studentIds = assignments.flatMap((assignment: any) => assignment.studentId ? [assignment.studentId._id] : []);
+  const quizzes = staff && studentIds.length ? await Quiz.find({ classId }).distinct("_id") : [];
+  const results = quizzes.length ? await QuizResult.find({
+    quizId: { $in: quizzes }, studentId: { $in: studentIds },
+    "progress.status": "completed", gradeStatus: { $in: ["reviewed", "released"] },
+  }).select("studentId percentage").lean() : [];
+  const metrics = summarizePerformance(results);
+  const data = assignments.filter((assignment: any) => assignment.studentId).map((assignment: any) => {
+    const item = assignment.toObject();
+    const metric = metrics.get(String(item.studentId._id));
+    item.studentId.performance = metric ?? { percentage: null, resultCount: 0, totalPercentage: 0 };
+    return item;
+  });
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Students for class fetched successfully",
-    data: assignments,
+    data,
   });
 });
 

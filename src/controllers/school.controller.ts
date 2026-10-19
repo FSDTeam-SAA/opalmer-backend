@@ -168,6 +168,8 @@ const deleteSchool = catchAsync(async (req, res) => {
     throw new AppError(404, "School not found");
   }
 
+  if (await User.exists({ schoolId: id, type: { $in: ["teacher", "student", "parent"] } })) throw new AppError(409, "This school has linked users. Transfer or archive its records before deletion.");
+
   await Promise.all([
     targetSchool.administrator
       ? User.findByIdAndUpdate(targetSchool.administrator, {

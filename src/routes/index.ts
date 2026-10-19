@@ -1,3 +1,5 @@
+import oversightRouter from "./oversight.routes";
+import { protect } from "../middlewares/auth.middleware";
 import { Router } from 'express'
 import classRoutes from '../routes/class.routes'
 import quizzesTestRouter from '../routes/quizResult.routes'
@@ -27,6 +29,7 @@ import callLogRoutes from './callLog.route'
 const router = Router()
 
 const moduleRoutes = [
+  { path: "/oversight", route: oversightRouter },
   {
     path: '/featuresAndQuestions',
     route: featuresAndQuestionsRouter,
@@ -126,6 +129,10 @@ const moduleRoutes = [
   }
 ]
 
-moduleRoutes.forEach((route) => router.use(route.path, route.route))
+moduleRoutes.forEach(route => {
+  const publicModule = ['/users', '/school', '/aboutAndTerm', '/featuresAndQuestions'].includes(route.path);
+  if (publicModule) router.use(route.path, route.route);
+  else router.use(route.path, protect, route.route);
+})
 
 export default router

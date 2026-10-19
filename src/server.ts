@@ -1,3 +1,6 @@
+import { initRealtime } from "./services/realtime.service";
+import { initNotificationSocket } from "./sockets/notification.service";
+import { startMediaCleanupWorker } from "./services/mediaCleanup.service";
 import app from './app'
 import './config/env'
 import { connectDB } from './config/db'
@@ -22,12 +25,15 @@ export const io = new Server(httpserver, {
   },
 })
 
+initRealtime(io);
+initNotificationSocket(io);
 io.use(socketAuthMiddleware as any)
 
 setupMessageSocket(io)
 setupWebRTCSocket(io)
 
 connectDB().then(() => {
+  startMediaCleanupWorker();
   httpserver.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server is running at http://localhost:${PORT}`)
   })

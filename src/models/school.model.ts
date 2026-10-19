@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import { model, Schema } from "mongoose";
 import { ISchool } from "../interface/school.interface";
 
@@ -21,6 +22,8 @@ const schoolSchema = new Schema<ISchool>(
     versionKey: false,
   }
 );
+
+schoolSchema.plugin(mediaCleanupPlugin, { model: 'School' });
 
 const school = model<ISchool>("School", schoolSchema);
 export default school;

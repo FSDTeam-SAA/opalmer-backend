@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import { Router } from "express";
 import academicDocumentController from "../controllers/academicDocument.controller";
 import { authorizeTypes, protect } from "../middlewares/auth.middleware";
@@ -10,43 +11,43 @@ router.post(
   protect,
   authorizeTypes("teacher"),
   upload.single("document"),
-  academicDocumentController.createAcademicDocument,
+  resourceAccess("academicDocument"), academicDocumentController.createAcademicDocument,
 );
 
 router.get(
   "/student-documents",
   protect,
   authorizeTypes("student"),
-  academicDocumentController.getAcademicDocumentForStudent,
+  resourceAccess("academicDocument"), academicDocumentController.getAcademicDocumentForStudent,
 );
 
 router.get(
   "/child-documents",
   protect,
   authorizeTypes("parent"),
-  academicDocumentController.getAcademicDocumentForChild,
+  resourceAccess("academicDocument"), academicDocumentController.getAcademicDocumentForChild,
 );
 
 router.get(
   "/teacher-documents",
   protect,
   authorizeTypes("teacher"),
-  academicDocumentController.getAcademicDocumentForTeacher,
+  resourceAccess("academicDocument"), academicDocumentController.getAcademicDocumentForTeacher,
 );
 
 router.get(
   "/class-documents/:classId",
-  academicDocumentController.getDocumentByClass,
+  resourceAccess("academicDocument"), academicDocumentController.getDocumentByClass,
 );
 
 router.get(
   "/student/:studentId",
-  academicDocumentController.getAcademicDocumentByStudentId,
+  resourceAccess("academicDocument"), academicDocumentController.getAcademicDocumentByStudentId,
 );
 
 router.get(
   "/:academicDocumentId",
-  academicDocumentController.getSingleAcademicDocument,
+  resourceAccess("academicDocument"), academicDocumentController.getSingleAcademicDocument,
 );
 
 router.put(
@@ -54,14 +55,14 @@ router.put(
   protect,
   authorizeTypes("teacher"),
   upload.single("document"),
-  academicDocumentController.updateAcademicDocument,
+  resourceAccess("academicDocument"), academicDocumentController.updateAcademicDocument,
 );
 
 router.delete(
   "/delete/:id",
   protect,
   authorizeTypes("teacher"),
-  academicDocumentController.deleteAcademicDocument,
+  resourceAccess("academicDocument"), academicDocumentController.deleteAcademicDocument,
 );
 
 const academicDocumentRouter = router;

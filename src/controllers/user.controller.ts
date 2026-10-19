@@ -1,4 +1,7 @@
+import { disconnectUser } from '../services/realtime.service';
 import bcrypt from "bcrypt";
+import { jwtSecret } from "../middlewares/auth.middleware";
+import { activeAccount, assertSchool, isAdministrator } from "../services/access.service";
 import { Request, Response } from "express";
 import httpStatus from "http-status";
 import jwt from "jsonwebtoken";
@@ -29,8 +32,9 @@ const signAccessToken = (user: IUser) =>
       type: user.type,
       Id: user.Id,
       tokenVersion: getTokenVersion(user),
+      purpose: "access",
     },
-    process.env.JWT_SECRET || "default_secret",
+    jwtSecret(),
     { expiresIn: "7d" },
   );
 
@@ -54,6 +58,11 @@ const toPublicUser = (user: IUser) => ({
   created_at: user.created_at,
   updated_at: user.updated_at,
   isTwoFactorAuthEnabled: user.isTwoFactorAuthEnabled,
+  language: user.language,
+  subjects: user.subjects,
+  locationState: user.locationState,
+  notificationPreferences: user.notificationPreferences,
+  communicationPreferences: user.communicationPreferences,
 });
 
 const ensureUniqueId = async (Id: string) => {
@@ -195,6 +204,7 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
+  if (!["teacher", "student", "parent"].includes(type)) throw new AppError(400, "Choose a valid account type");
   // Handle image upload
   await ensureUniqueId(Id);
   const avatar = await buildAvatarFromRequest(req.file);
@@ -227,12 +237,13 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
     role,
     schoolId,
     gender,
+    ...(["teacher", "student"].includes(type) ? { state: "inactive", isActive: false } : {}),
   });
 
   const adminUsers = await User.findOne({ role: "admin" });
 
-  await createNotification({
-    to: new mongoose.Types.ObjectId(adminUsers!._id as any),
+  if (adminUsers) await createNotification({
+    to: new mongoose.Types.ObjectId(adminUsers._id as any),
     message: `New user registered: ${username}`,
     type: "user",
     id: user._id,
@@ -259,7 +270,8 @@ export const registerUser = catchAsync(async (req: Request, res: Response) => {
  * LOGIN USER *
  **************/
 export const loginUser = catchAsync(async (req: Request, res: Response) => {
-  const { Id, password } = req.body;
+  const { password } = req.body;
+  const Id = String(req.body.Id ?? req.body.email ?? "").trim();
 
   // Validate input
   if (!Id || !password) {
@@ -267,11 +279,11 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
   }
 
   // Find user by Id
-  const user = await User.findOne({ Id }).select("+password");
+  const user = await User.findOne({ $or: [{ Id }, { email: Id.toLowerCase() }] }).select("+password");
   if (!user) {
     throw new AppError(401, "Invalid Id or password.");
   }
-  if (user.isActive === false) {
+  if (!activeAccount(user)) {
     throw new AppError(401, "Your account has been Deactivated.");
   }
 
@@ -309,7 +321,7 @@ export const loginUser = catchAsync(async (req: Request, res: Response) => {
       success: true,
       message: "Verification code sent to your email",
       data: {
-        accessToken: token,
+        challengeToken: jwt.sign({ userId: user._id, tokenVersion: getTokenVersion(user), purpose: "2fa" }, jwtSecret(), { expiresIn: "5m" }),
         is2FA: true,
       },
     });
@@ -362,6 +374,7 @@ export const logoutUser = catchAsync(async (req: Request, res: Response) => {
     $inc: { tokenVersion: 1 },
     $set: { refreshToken: "" },
   });
+  disconnectUser(String(authUser._id));
 
   return sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -420,7 +433,9 @@ export const changePassword = catchAsync(
 
     // The pre-save hook on User hashes this before persistence.
     user.password = newPassword;
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
+    disconnectUser(String(user._id));
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -440,7 +455,8 @@ export const searchStudentById = catchAsync(
 
     // Exact match (case insensitive) for the student 'Id'
     const students = await User.find({
-      Id: new RegExp(`^${Id}$`, "i"),
+      Id: Id,
+      ...(req.user?.role === "admin" ? {} : { schoolId: req.user?.schoolId }),
       type: "student",
     }).select("username Id gradeLevel age avatar");
 
@@ -762,24 +778,32 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     });
   }
 
-  const updateData: Record<string, any> = { ...req.body };
-  const canAdminManageAdministrator =
-    authUser.role === "admin" && targetUser.role === "administrator";
-
-  // Fields clients must never mutate through this endpoint.
-  const restrictedFields = [
-    "role",
-    "refreshToken",
-    "verificationInfo",
-    "password_reset_token",
-    "isActive",
-  ];
-  restrictedFields.forEach((field) => delete updateData[field]);
-
-  if (!canAdminManageAdministrator) {
-    delete updateData.password;
-    delete updateData.Id;
-    delete updateData.schoolId;
+  if (!isOwner && isAdmin && authUser.role !== "admin") assertSchool(authUser, targetUser.schoolId);
+  const allowed = isAdmin
+    ? ["username", "phoneNumber", "email", "age", "gender", "gradeLevel", "state", "language", "notificationPreferences", "communicationPreferences", "subjects", "locationState", "accommodations", "notes"]
+    : ["username", "phoneNumber", "email", "age", "gender", "language", "locationState", "notificationPreferences", "communicationPreferences", ...(authUser.type === "teacher" ? ["gradeLevel", "subjects"] : [])];
+  const updateData: Record<string, any> = Object.fromEntries(allowed.filter(key => key in req.body).map(key => [key, req.body[key]]));
+  if ("subjects" in updateData) {
+    if (typeof updateData.subjects === "string") {
+      try { updateData.subjects = JSON.parse(updateData.subjects); }
+      catch { throw new AppError(400, "Subjects must be a list"); }
+    }
+    if (!Array.isArray(updateData.subjects) || updateData.subjects.length > 20 || updateData.subjects.some((subject: unknown) => typeof subject !== "string" || !subject.trim() || subject.length > 80)) throw new AppError(400, "Choose valid subjects");
+    updateData.subjects = [...new Set(updateData.subjects.map((subject: string) => subject.trim()))];
+  }
+  if (!isAdmin && "gradeLevel" in updateData && (!Number.isInteger(Number(updateData.gradeLevel)) || Number(updateData.gradeLevel) < 1 || Number(updateData.gradeLevel) > 12)) throw new AppError(400, "Choose a grade from 1 to 12");
+  const removeAvatar = req.body.removeAvatar === true || req.body.removeAvatar === "true";
+  if (removeAvatar && req.file) throw new AppError(400, "Choose a new photo or remove the current photo");
+  if (removeAvatar) updateData.avatar = { public_id: "", url: "" };
+  const canAdminManageAdministrator = isAdmin && !isOwner;
+  if (canAdminManageAdministrator) {
+    if (req.body.Id) updateData.Id = req.body.Id;
+    if (req.body.password) updateData.password = req.body.password;
+    if (authUser.role === "admin" && targetUser.role === "administrator" && "schoolId" in req.body) updateData.schoolId = req.body.schoolId;
+  }
+  if (isAdmin && "state" in updateData) {
+    updateData.isActive = updateData.state === "active";
+    if (updateData.state !== targetUser.state) updateData.tokenVersion = (targetUser.tokenVersion ?? 0) + 1;
   }
 
   if (canAdminManageAdministrator) {
@@ -799,7 +823,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
       delete updateData.password;
     }
 
-    if ("schoolId" in updateData) {
+    if (targetUser.role === "administrator" && "schoolId" in updateData) {
       const nextSchoolId = await updateAdministratorSchoolAssignment(
         id,
         targetUser.schoolId,
@@ -812,6 +836,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
   // If a new avatar image is uploaded, push it to Cloudinary and merge into avatar
   if (req.file) {
     const uploadResult = await uploadToCloudinary(req.file.path);
+    if (!uploadResult) throw new AppError(502, "Photo upload failed. Your previous photo has been kept. Please retry.");
     if (uploadResult) {
       updateData.avatar = {
         public_id: uploadResult.public_id,
@@ -829,6 +854,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
+  if (updateData.tokenVersion !== undefined) disconnectUser(String(id));
   return sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -847,6 +873,7 @@ export const getStudentCountByGrade = catchAsync(
     const count = await User.countDocuments({
       type: "student",
       gradeLevel: Number(grade),
+      ...(req.user?.role === "admin" ? {} : { schoolId: req.user?.schoolId }),
     });
 
     return sendResponse(res, {
@@ -917,6 +944,9 @@ export const toggleTwoFactorAuth = catchAsync(
       throw new AppError(httpStatus.NOT_FOUND, "User not found");
     }
 
+    if (!user.email) throw new AppError(400, "Add an email before enabling two-factor authentication");
+    if (!req.body.password || !await User.isPasswordMatched(String(req.body.password), (await User.findById(userId).select("+password"))!.password)) throw new AppError(401, "Current password is required");
+    if (!user.isTwoFactorAuthEnabled && (!process.env.EMAIL_ADDRESS?.trim() || !process.env.EMAIL_PASSWORD?.trim())) throw new AppError(503, "Email verification is not configured. Contact your administrator before enabling two-factor authentication.");
     user.isTwoFactorAuthEnabled = !user.isTwoFactorAuthEnabled;
     const updatedUser = await user.save();
 
@@ -932,7 +962,6 @@ export const verifyOTP = catchAsync(async (req: Request, res: Response) => {
   const { _id: userId } = req.user as any;
   const { otp } = req.body;
 
-  console.log("req", userId);
 
   if (!userId) {
     throw new AppError(httpStatus.UNAUTHORIZED, "Unauthorized user");
@@ -966,10 +995,8 @@ export const verifyOTP = catchAsync(async (req: Request, res: Response) => {
   }
 
   // ✅ Clear OTP after success
-  user.hashedOtp = undefined;
-  user.otpExpires = undefined;
-
-  await user.save();
+  const claimed = await User.updateOne({ _id: user._id, hashedOtp: user.hashedOtp, otpExpires: { $gt: new Date() } }, { $unset: { hashedOtp: "", otpExpires: "" } });
+  if (!claimed.modifiedCount) throw new AppError(400, "OTP has expired or was already used");
 
   // 🎯 FINAL ACCESS TOKEN (IMPORTANT)
   const token = signAccessToken(user);
@@ -1184,7 +1211,7 @@ export const getSingleStudentAllDetails = catchAsync(
     // 1. Student Basic Info
     // =====================
     const studentData = await User.findById(id).select(
-      "username Id phoneNumber gradeLevel age",
+      "username Id phoneNumber email gradeLevel age avatar state isActive",
     );
     if (!studentData) {
       throw new AppError(404, "Student not found");
@@ -1197,7 +1224,7 @@ export const getSingleStudentAllDetails = catchAsync(
       childId: id,
     }).populate({
       path: "parentId",
-      select: "username Id phoneNumber email",
+      select: "username Id phoneNumber email avatar",
     });
 
     // =====================
@@ -1229,7 +1256,7 @@ export const getSingleStudentAllDetails = catchAsync(
       classId: { $in: classIds },
     });
 
-    const totalAttendance = attendanceData.length;
+    const totalAttendance = attendanceData.filter(a => a.status.toLowerCase() !== "holiday").length;
 
     const presentCount = attendanceData.filter(
       (a) => a.status === "present",
@@ -1242,8 +1269,9 @@ export const getSingleStudentAllDetails = catchAsync(
     // =====================
     // 5. Quiz Results (ALL)
     // =====================
+    const classQuizzes = await Quiz.find({ classId: { $in: classIds } }).select("_id classId");
     const quizResults = await QuizResult.find({
-      studentId: id,
+      studentId: id, quizId: { $in: classQuizzes.map(q => q._id) }, gradeStatus: "released", "progress.status": "completed",
     });
 
     const totalQuiz = quizResults.length;
@@ -1267,7 +1295,7 @@ export const getSingleStudentAllDetails = catchAsync(
         (a) => a.classId.toString() === classId.toString(),
       );
 
-      const total = subAttendance.length;
+      const total = subAttendance.filter(a => a.status.toLowerCase() !== "holiday").length;
 
       const present = subAttendance.filter(
         (a) => a.status === "present",
@@ -1279,7 +1307,7 @@ export const getSingleStudentAllDetails = catchAsync(
         classId,
         subject: classDoc.subject || "Unknown",
         attendance: attendancePercent,
-        progress: overallProgress,
+        progress: (() => { const quizIds = new Set(classQuizzes.filter(q => String(q.classId) === String(classId)).map(q => String(q._id))); const results = quizResults.filter(r => quizIds.has(String(r.quizId))); return results.length ? Math.round(results.reduce((sum, r) => sum + (r.percentage ?? 0), 0) / results.length) : 0; })(),
         teacher: classDoc.teacherId,
       };
     });
@@ -1365,7 +1393,7 @@ export const getSingleAdministratorAllDetails = catchAsync(
 );
 
 export const getAllStudent = catchAsync(async (req: Request, res: Response) => {
-  const students = await User.find({ type: "student" }).select(
+  const students = await User.find({ type: "student", ...(req.user?.role === "admin" ? {} : { schoolId: req.user?.schoolId }) }).select(
     "username Id phoneNumber email gradeLevel avatar",
   );
 
@@ -1464,7 +1492,7 @@ export const getSingleTeacherDetails = catchAsync(
 );
 
 export const getAllParents = catchAsync(async (req: Request, res: Response) => {
-  const parents = await User.find({ type: "parent" }).select(
+  const parents = await User.find({ type: "parent", ...(req.user?.role === "admin" ? {} : { schoolId: req.user?.schoolId }) }).select(
     "username Id phoneNumber email avatar",
   );
 

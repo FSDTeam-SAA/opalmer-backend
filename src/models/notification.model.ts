@@ -12,6 +12,15 @@ const notificationSchema: Schema<INotification> = new Schema(
       type: String,
       required: true,
     },
+    studentId: { type: Schema.Types.ObjectId, ref: 'User' },
+    classId: { type: Schema.Types.ObjectId, ref: 'Class' },
+    eventKey: { type: String },
+    deliveryStatus: { type: String, enum: ['pending', 'delivered', 'failed', 'in_app'], default: 'pending' },
+    deliveryError: String,
+    attempts: { type: Number, default: 0 },
+    nextAttemptAt: { type: Date, default: Date.now },
+    claimedAt: Date,
+    deliveredAt: Date,
     isViewed: {
       type: Boolean,
       default: false,
@@ -27,6 +36,8 @@ const notificationSchema: Schema<INotification> = new Schema(
   },
   { timestamps: true }
 )
+
+notificationSchema.index({ eventKey: 1 }, { unique: true, sparse: true });
 
 export const Notification: Model<INotification> = mongoose.model<INotification>(
   'Notification',

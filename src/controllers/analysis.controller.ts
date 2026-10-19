@@ -1,158 +1,53 @@
-import { Request, Response } from "express";
 import { Attendance } from "../models/attendance.model";
-import { Class } from "../models/class.model";
+import { Quiz } from "../models/quiz.model";
+import { QuizResult } from "../models/quizResult.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
-import { User } from "../models/user.model";
 import catchAsync from "../utils/catchAsync";
+import AppError from "../errors/AppError";
+import { analysisRange } from "../services/classMetrics.service";
 
-export const getSingleStudentAnalysisController = catchAsync(
-  async (req: Request, res: Response) => {
-    const { classId, studentId } = req.params;
-    const { filter = "weekly" } = req.query;
-
-    // ✅ Check student in class (Explicit or Grade-based)
-    const studentExistInClass = await StuAssignToClass.findOne({
-      classId,
-      studentId,
-    });
-
-    if (!studentExistInClass) {
-      const [student, classData] = await Promise.all([
-        User.findById(studentId),
-        Class.findById(classId),
-      ]);
-
-      if (
-        !student ||
-        !classData ||
-        Number(student.gradeLevel) !== Number(classData.grade)
-      ) {
-        return res.status(404).json({
-          success: false,
-          message: "Student not found in this class",
-        });
-      }
-    }
-
-    // ✅ Date range
-    let startDate = new Date();
-
-    if (filter === "monthly") {
-      startDate.setMonth(startDate.getMonth() - 11);
-    } else {
-      startDate.setDate(startDate.getDate() - 6);
-    }
-
-    // ✅ Only THIS student's attendance
-    const attendance = await Attendance.find({
-      classId,
-      userId: studentId,
-      date: { $gte: startDate },
-    });
-
-    // -------------------------
-    // 📊 STRUCTURE INIT
-    // -------------------------
-
-    const daysOrder = [
-      "Saturday",
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-    ];
-
-    const monthsOrder = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-
-    const grouped: any = {};
-
-    // ✅ Pre-fill (IMPORTANT)
-    if (filter === "weekly") {
-      daysOrder.forEach((day) => {
-        grouped[day] = { present: 0, absent: 0 };
-      });
-    } else {
-      monthsOrder.forEach((month) => {
-        grouped[month] = { present: 0, absent: 0 };
-      });
-    }
-
-    // -------------------------
-    // 📊 FILL DATA
-    // -------------------------
-
-    attendance.forEach((item) => {
-      const date = new Date(item.date);
-
-      const key =
-        filter === "monthly"
-          ? date.toLocaleString("en-US", { month: "long" })
-          : date.toLocaleString("en-US", { weekday: "long" });
-
-      if (item.status === "present") grouped[key].present++;
-      else if (item.status === "absent") grouped[key].absent++;
-    });
-
-    // -------------------------
-    // 📊 FORMAT RESULT
-    // -------------------------
-
-    const order = filter === "weekly" ? daysOrder : monthsOrder;
-
-    const chartData = order.map((label) => ({
-      label,
-      present: grouped[label].present,
-      absent: grouped[label].absent,
-    }));
-
-    // -------------------------
-    // 📊 SUMMARY
-    // -------------------------
-
-    let present = 0;
-    let absent = 0;
-
-    Object.values(grouped).forEach((d: any) => {
-      present += d.present;
-      absent += d.absent;
-    });
-
-    const total = present + absent;
-    const percentage = total ? (present / total) * 100 : 0;
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        studentId,
-        classId,
-        filter,
-
-        summary: {
-          totalDays: total,
-          present,
-          absent,
-          percentage: percentage.toFixed(2),
-        },
-
-        chartData,
-      },
-    });
-  },
-);
-
-
+export const getSingleStudentAnalysisController = catchAsync(async (req, res) => {
+  const { classId, studentId } = req.params;
+  const { filter, start, end, buckets } = analysisRange(String(req.query.filter ?? "weekly"));
+  if (!await StuAssignToClass.exists({ classId, studentId })) {
+    throw new AppError(404, "Student not enrolled in this class");
+  }
+  const quizzes = await Quiz.find({ classId }).distinct("_id");
+  const [attendance, results] = await Promise.all([
+    Attendance.find({ classId, userId: studentId, date: { $gte: start, $lte: end } }).lean(),
+    QuizResult.find({
+      studentId, quizId: { $in: quizzes }, "progress.status": "completed",
+      gradeStatus: { $in: req.user?.type === 'teacher' || ['admin', 'administrator'].includes(req.user?.role ?? '') ? ["reviewed", "released"] : ["released"] },
+      submittedAt: { $gte: start, $lte: end },
+    }).select("percentage submittedAt").lean(),
+  ]);
+  const chartData = buckets.map(bucket => ({ label: bucket.label, present: 0, absent: 0 }));
+  const performanceChartData = buckets.map(bucket => ({ label: bucket.label, percentage: null as number | null, resultCount: 0, total: 0 }));
+  for (const row of attendance) {
+    const index = buckets.findIndex(bucket => bucket.key === new Date(row.date).toISOString().slice(0, 10));
+    if (index < 0) continue;
+    const status = String(row.status).toLowerCase();
+    if (status === "present") chartData[index].present++;
+    if (status === "absent") chartData[index].absent++;
+  }
+  for (const row of results) {
+    if (typeof row.percentage !== "number" || !Number.isFinite(row.percentage) || row.percentage < 0 || row.percentage > 100 || !row.submittedAt) continue;
+    const index = buckets.findIndex(bucket => bucket.key === new Date(row.submittedAt!).toISOString().slice(0, 10));
+    if (index < 0) continue;
+    const point = performanceChartData[index];
+    point.resultCount++;
+    point.total += row.percentage;
+    point.percentage = Math.round(point.total / point.resultCount);
+  }
+  const present = chartData.reduce((total, point) => total + point.present, 0);
+  const absent = chartData.reduce((total, point) => total + point.absent, 0);
+  const resultCount = performanceChartData.reduce((total, point) => total + point.resultCount, 0);
+  const totalPercentage = performanceChartData.reduce((total, point) => total + point.total, 0);
+  res.json({ success: true, data: {
+    studentId, classId, filter,
+    summary: { totalDays: present + absent, present, absent, percentage: present + absent ? ((present / (present + absent)) * 100).toFixed(2) : null },
+    chartData,
+    performanceSummary: { resultCount, percentage: resultCount ? Math.round(totalPercentage / resultCount) : null },
+    performanceChartData: performanceChartData.map(({ total, ...point }) => point),
+  } });
+});

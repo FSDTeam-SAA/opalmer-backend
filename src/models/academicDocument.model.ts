@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import { model, Schema } from "mongoose";
 import { IAcademicDocument } from "../interface/academicDocument.interface";
 
@@ -17,6 +18,8 @@ const academicDocumentSchema = new Schema<IAcademicDocument>(
     versionKey: false,
   }
 );
+
+academicDocumentSchema.plugin(mediaCleanupPlugin, { model: 'AcademicDocument' });
 
 const AcademicDocument = model<IAcademicDocument>(
   "AcademicDocument",

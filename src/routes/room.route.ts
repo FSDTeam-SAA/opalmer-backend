@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from 'express'
 import {
   createRoom,
@@ -9,19 +10,19 @@ import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 
 const router = express.Router()
 
-router.post('/', protect, upload.single('avatar'), createRoom)
+router.post('/', protect, upload.single('avatar'), resourceAccess("rooms"), createRoom)
 router.patch(
   '/:id',
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
   upload.single('avatar'),
-  editRoom,
+  resourceAccess("rooms"), editRoom,
 )
 router.get(
   '/my-rooms',
   protect,
   authorizeTypes('teacher', 'parent', 'student'),
-  getRoomsByUserId,
+  resourceAccess("rooms"), getRoomsByUserId,
 )
 
 export default router

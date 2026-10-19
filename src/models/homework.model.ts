@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from 'mongoose'
 import { IHomework, HomeworkModel } from '../interface/homework.interface'
 
@@ -6,12 +7,17 @@ const homeworkSchema: Schema<IHomework> = new Schema(
     classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
+    status: { type: String, enum: ['draft', 'published'], default: 'published' },
+    pointsPossible: { type: Number, default: 100, min: 1, max: 10000 },
+    studentIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    standards: { type: [String], default: [] },
     description: { type: String },
     dueDate: { type: Date },
       file: {
       type: [
         {
           public_id: { type: String, default: "" },
+          filename: { type: String, default: "" },
           url: { type: String, default: "" }
         }
       ],
@@ -31,6 +37,8 @@ homeworkSchema.statics.findByClass = async function (classId: string) {
 homeworkSchema.statics.findByUser = async function (userId: string) {
   return await this.find({ userId })
 }
+
+homeworkSchema.plugin(mediaCleanupPlugin, { model: 'Homework' });
 
 export const Homework = mongoose.model<IHomework, HomeworkModel>(
   'Homework',

@@ -1,3 +1,6 @@
+import { forgotPassword, resetPassword } from "../controllers/passwordReset.controller";
+import { rateLimit } from "../middlewares/rateLimit.middleware";
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from "express";
 import {
   changePassword,
@@ -27,48 +30,51 @@ import {
   updateUser,
   verifyOTP,
 } from "../controllers/user.controller";
-import { authorizeRoles, protect } from "../middlewares/auth.middleware";
-import { upload } from "../middlewares/multer.middleware";
+import { authorizeRoles, protect, protectChallenge } from "../middlewares/auth.middleware";
+import { upload, profileUpload } from "../middlewares/multer.middleware";
 const router = express.Router();
 
-router.post("/register", upload.single("image"), registerUser);
-router.post("/login", loginUser);
+router.post("/register", upload.single("image"), resourceAccess("users"), registerUser);
+router.post("/login", rateLimit(10, 15 * 60_000), resourceAccess("users"), loginUser);
+
+router.post("/forgot-password", rateLimit(5, 15 * 60_000), forgotPassword);
+router.post("/reset-password", rateLimit(10, 15 * 60_000), resetPassword);
 
 // Current user & password management (token-scoped).
-router.get("/me", protect, getMe);
-router.post("/logout", protect, logoutUser);
-router.post("/change-password", protect, changePassword);
+router.get("/me", protect, resourceAccess("users"), getMe);
+router.post("/logout", protect, resourceAccess("users"), logoutUser);
+router.post("/change-password", protect, resourceAccess("users"), changePassword);
 
-router.get("/administrators", getAllAdministrators);
+router.get("/administrators", resourceAccess("users"), getAllAdministrators);
 router.post(
   "/administrators",
   protect,
   authorizeRoles("admin"),
   upload.single("image"),
-  createAdministrator,
+  resourceAccess("users"), createAdministrator,
 );
 
-router.get("/search-student", searchStudentById);
+router.get("/search-student", resourceAccess("users"), searchStudentById);
 
 router.get(
   "/my-students",
   protect,
   authorizeRoles("administrator", "admin"),
-  getMySchoolAllStudents,
+  resourceAccess("users"), getMySchoolAllStudents,
 );
 
 router.get(
   "/my-teachers",
   protect,
   authorizeRoles("administrator", "admin"),
-  getMySchoolAllTeachers,
+  resourceAccess("users"), getMySchoolAllTeachers,
 );
 
 router.get(
   "/my-parents",
   protect,
   authorizeRoles("administrator", "admin"),
-  getMySchoolAllParents,
+  resourceAccess("users"), getMySchoolAllParents,
 );
 
 router.post(
@@ -76,7 +82,7 @@ router.post(
   protect,
   authorizeRoles("administrator"),
   upload.single("image"),
-  createSchoolStudent,
+  resourceAccess("users"), createSchoolStudent,
 );
 
 router.post(
@@ -84,7 +90,7 @@ router.post(
   protect,
   authorizeRoles("administrator"),
   upload.single("image"),
-  createSchoolTeacher,
+  resourceAccess("users"), createSchoolTeacher,
 );
 
 router.post(
@@ -92,27 +98,27 @@ router.post(
   protect,
   authorizeRoles("administrator"),
   upload.single("image"),
-  createSchoolParent,
+  resourceAccess("users"), createSchoolParent,
 );
 
-router.put("/toggle", protect, toggleTwoFactorAuth);
+router.put("/toggle", protect, resourceAccess("users"), toggleTwoFactorAuth);
 
-router.post("/verify-otp", protect, verifyOTP);
+router.post("/verify-otp", rateLimit(10, 15 * 60_000), protectChallenge, resourceAccess("users"), verifyOTP);
 
-router.get("/my-school/students/grade/:grade", protect, getMySchoolStudentsByGrade);
-router.get("/students/grade/:grade", getStudentsByGrade);
-router.get("/students/count/:grade", getStudentCountByGrade);
-router.get("/contacts", protect, getContacts);
+router.get("/my-school/students/grade/:grade", protect, resourceAccess("users"), getMySchoolStudentsByGrade);
+router.get("/students/grade/:grade", resourceAccess("users"), getStudentsByGrade);
+router.get("/students/count/:grade", resourceAccess("users"), getStudentCountByGrade);
+router.get("/contacts", protect, resourceAccess("users"), getContacts);
 
-router.get("/students", getAllStudent);
-router.get("/parents", getAllParents);
+router.get("/students", resourceAccess("users"), getAllStudent);
+router.get("/parents", resourceAccess("users"), getAllParents);
 
-router.get("/:id", getSingleStudentAllDetails);
+router.get("/:id", resourceAccess("users"), getSingleStudentAllDetails);
 
 // Authenticated profile edit. Controller further enforces owner-or-admin
 // authorization using the token-bound user.
-router.put("/:id", protect, upload.single("image"), updateUser);
-router.get("/administrators/:id", getSingleAdministratorAllDetails);
-router.get("/teachers/:id", getSingleTeacherDetails);
+router.put("/:id", protect, profileUpload.single("image"), resourceAccess("users"), updateUser);
+router.get("/administrators/:id", resourceAccess("users"), getSingleAdministratorAllDetails);
+router.get("/teachers/:id", resourceAccess("users"), getSingleTeacherDetails);
 
 export default router;

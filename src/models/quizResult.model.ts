@@ -22,11 +22,22 @@ const quizResultSchema = new Schema<IQuizResult>(
         default: 'ongoing',
       },
     },
+    startedAt: { type: Date },
+    deadline: { type: Date },
+    submittedAt: { type: Date },
+    questionSnapshot: { type: [Schema.Types.Mixed], select: false },
+    gradeStatus: { type: String, enum: ['pending_review', 'reviewed', 'released'], default: 'pending_review' },
+    feedback: { type: String, default: '' },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    releasedAt: { type: Date },
+    history: { type: [Schema.Types.Mixed], default: [] },
     score: { type: Number, default: 0 }, // correct answers count
     percentage: { type: Number, default: 0 },
   },
   { timestamps: true }
 )
+
+quizResultSchema.index({ quizId: 1, studentId: 1 }, { unique: true });
 
 export const QuizResult = mongoose.model(
   'QuizResult',

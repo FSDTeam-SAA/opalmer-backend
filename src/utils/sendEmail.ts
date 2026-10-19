@@ -1,36 +1,14 @@
 import nodemailer from 'nodemailer';
-import config from '../config/config';
+import { getRequiredEnv } from '../config/env';
 
-
-const sendEmail = async ({ to, subject, html }: { to: string, subject: string, html: string }) => {
-  try {
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: config.email.emailAddress,
-        pass: config.email.emailPass,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-
-    const mailOptions = {
-      from: config.email.emailAddress,
-      to,
-      subject,
-      html,
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully");
-    return { success: true };
-  } catch (error:any) {
-    console.error("Email send error:", error.message);
-    return { success: false, error: error.message };
-  }
+const sendEmail = async ({ to, subject, html }: { to: string; subject: string; html: string }) => {
+  const port = Number(process.env.SMTP_PORT || 587);
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com', port, secure: port === 465,
+    auth: { user: getRequiredEnv('EMAIL_ADDRESS'), pass: getRequiredEnv('EMAIL_PASSWORD') },
+    tls: { rejectUnauthorized: true },
+  });
+  await transporter.sendMail({ from: process.env.EMAIL_ADDRESS, to, subject, html });
+  return { success: true };
 };
-
 export default sendEmail;

@@ -1,3 +1,4 @@
+import { visibleClassIds } from "../services/access.service";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
@@ -34,8 +35,8 @@ export const createClass = catchAsync(async (req, res) => {
 
   const adminUsers = await User.findOne({ role: "admin" });
 
-  await createNotification({
-    to: new mongoose.Types.ObjectId(adminUsers!._id as any),
+  if (adminUsers) await createNotification({
+    to: new mongoose.Types.ObjectId(adminUsers._id as any),
     message: `New class created: ${newClass.grade} ${newClass.subject} ${newClass.section}`,
     type: "class",
     id: newClass._id as any,
@@ -53,7 +54,7 @@ export const createClass = catchAsync(async (req, res) => {
  * GET ALL CLASSES *
  *********************/
 export const getAllClasses = catchAsync(async (req, res) => {
-  const classes = await Class.find().populate("teacherId", "username email");
+  const classes = await Class.find({ _id: { $in: await visibleClassIds(req.user) } }).populate("teacherId", "username email");
 
   const classAnalytics = await Promise.all(
     classes.map(async (cls) => {
@@ -64,7 +65,7 @@ export const getAllClasses = catchAsync(async (req, res) => {
         classId: cls._id,
       });
 
-      const totalAttendance = attendance.length;
+      const totalAttendance = attendance.filter(a => a.status.toLowerCase() !== "holiday").length;
 
       const presentCount = attendance.filter(
         (a) => a.status === "present",
@@ -76,12 +77,11 @@ export const getAllClasses = catchAsync(async (req, res) => {
       // ======================
       // QUIZ
       // ======================
-      const studentIds = [
-        ...new Set(attendance.map((a) => a.userId.toString())),
-      ];
+      const studentIds = await StuAssignToClass.find({ classId: cls._id }).distinct("studentId");
+      const quizIds = await Quiz.find({ classId: cls._id }).distinct("_id");
 
       const quizResults = await QuizResult.find({
-        studentId: { $in: studentIds },
+        studentId: { $in: studentIds }, quizId: { $in: quizIds }, gradeStatus: "released", "progress.status": "completed",
       });
 
       const totalQuiz = quizResults.length;
@@ -134,7 +134,7 @@ export const getClassesByTeacher = catchAsync(async (req, res) => {
         classId: cls._id,
       });
 
-      const totalAttendance = attendance.length;
+      const totalAttendance = attendance.filter(a => a.status.toLowerCase() !== "holiday").length;
 
       const presentCount = attendance.filter(
         (a) => a.status === "present",
@@ -146,12 +146,11 @@ export const getClassesByTeacher = catchAsync(async (req, res) => {
       // ======================
       // QUIZ
       // ======================
-      const studentIds = [
-        ...new Set(attendance.map((a) => a.userId.toString())),
-      ];
+      const studentIds = await StuAssignToClass.find({ classId: cls._id }).distinct("studentId");
+      const quizIds = await Quiz.find({ classId: cls._id }).distinct("_id");
 
       const quizResults = await QuizResult.find({
-        studentId: { $in: studentIds },
+        studentId: { $in: studentIds }, quizId: { $in: quizIds }, gradeStatus: "released", "progress.status": "completed",
       });
 
       const totalQuiz = quizResults.length;
@@ -203,8 +202,8 @@ export const updateClass = catchAsync(async (req, res) => {
 
   const adminUsers = await User.findOne({ role: "admin" });
 
-  await createNotification({
-    to: new mongoose.Types.ObjectId(adminUsers!._id as any),
+  if (adminUsers) await createNotification({
+    to: new mongoose.Types.ObjectId(adminUsers._id as any),
     message: `New class updated: ${updatedClass.grade} ${updatedClass.subject} ${updatedClass.section}`,
     type: "class",
     id: updatedClass._id as any,
@@ -224,7 +223,7 @@ export const updateClass = catchAsync(async (req, res) => {
 export const getgradeWiseClasses = catchAsync(async (req, res) => {
   const studentId = req.user?._id;
 
-  const student = await User.findById(studentId).select("grade");
+  const student = await User.findById(studentId).select("gradeLevel");
   console.log(1, student);
 
   if (!student) {
@@ -234,7 +233,7 @@ export const getgradeWiseClasses = catchAsync(async (req, res) => {
 
   console.log(11, grade);
 
-  const classes = await Class.find({ grade }).populate(
+  const classes = await Class.find({ _id: { $in: await visibleClassIds(req.user) } }).populate(
     "teacherId",
     "-password_reset_token -refreshToken -verificationInfo",
   );
@@ -356,6 +355,7 @@ export const getClassesByStudent = catchAsync(async (req, res) => {
           quizId: { $in: quizIds },
           studentId,
           "progress.status": "completed",
+          gradeStatus: "released",
         }).select("percentage createdAt");
 
         if (completedResults.length) {

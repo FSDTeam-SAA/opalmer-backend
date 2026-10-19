@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from 'express'
 import {
   createClass,
@@ -12,24 +13,24 @@ import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 
 const router = express.Router()
 
-router.post('/', protect, authorizeTypes('teacher'), createClass)
-router.get('/', getAllClasses)
+router.post('/', protect, authorizeTypes('teacher'), resourceAccess("classes"), createClass)
+router.get('/', resourceAccess("classes"), getAllClasses)
 // Get All Classes
-router.get('/teacher/:teacherId', getClassesByTeacher)
+router.get('/teacher/:teacherId', resourceAccess("classes"), getClassesByTeacher)
 // Get Classes by Teacher ID
-router.put('/:id', updateClass)
-router.delete('/:id', deleteClass)
+router.put('/:id', resourceAccess("classes"), updateClass)
+router.delete('/:id', resourceAccess("classes"), deleteClass)
 
 // grade wise classes
 router.get(
   '/grade',
   protect,
   authorizeTypes('student'),
-  getgradeWiseClasses
+  resourceAccess("classes"), getgradeWiseClasses
 ) 
 
 // Get classes by student ID
-router.get('/student/:studentId', protect, getClassesByStudent)
+router.get('/student/:studentId', protect, resourceAccess("classes"), getClassesByStudent)
 
 
 export default router

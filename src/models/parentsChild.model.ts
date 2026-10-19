@@ -12,6 +12,8 @@ const parentsChildSchema = new Schema<IParentsChild>(
   { timestamps: true }
 )
 
+parentsChildSchema.index({ parentId: 1, childId: 1 }, { unique: true });
+
 export const ParentsChild = mongoose.model<IParentsChild, ParentsChildModel>(
   'ParentsChild',
   parentsChildSchema

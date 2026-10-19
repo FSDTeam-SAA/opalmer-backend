@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from 'mongoose'
 import {
   ILearningTip,
@@ -32,6 +33,8 @@ const learningTipSchema: Schema<ILearningTip> = new Schema(
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
+learningTipSchema.plugin(mediaCleanupPlugin, { model: 'LearningTip' });
+
 export const LearningTip = mongoose.model<ILearningTip, LearningTipModel>(
   'LearningTip',
   learningTipSchema

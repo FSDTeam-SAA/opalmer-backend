@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from "express";
 import {
   changeAttendanceStatus,
@@ -13,26 +14,26 @@ import { protect } from "../middlewares/auth.middleware";
 const router = express.Router();
 
 // Create attendance for all students in a class
-router.post("/class", createClassAttendance);
+router.post("/class", resourceAccess("attendances"), createClassAttendance);
 
 //  * CHANGE ATTENDANCE STATUS *
-router.patch("/class/:id", changeAttendanceStatus);
+router.patch("/class/:id", resourceAccess("attendances"), changeAttendanceStatus);
 
 //  * GET ALL ATTENDANCE *
-router.get("/class", protect, getAllAttendance);
+router.get("/class", protect, resourceAccess("attendances"), getAllAttendance);
 
 // * GET ALL ATTENDANCE FOR A STUDENT *
-router.get("/student", protect, getStudentAttendance);
+router.get("/student", protect, resourceAccess("attendances"), getStudentAttendance);
 
 // * GET CLASS ATTENDANCE STATS *
-router.get("/class/:classId/stats", getClassAttendanceStats);
+router.get("/class/:classId/stats", resourceAccess("attendances"), getClassAttendanceStats);
 
 // * GET STUDENT ATTENDANCE STATS *
-router.get("/student/:studentId/stats", protect, getStudentAttendanceStats);
+router.get("/student/:studentId/stats", protect, resourceAccess("attendances"), getStudentAttendanceStats);
 
 router.get(
   "/:studentId/:classId",
-  getSingleStudentSpecificSubjectAttendance,
+  resourceAccess("attendances"), getSingleStudentSpecificSubjectAttendance,
 );
 
 export default router;

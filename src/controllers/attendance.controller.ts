@@ -149,7 +149,8 @@ export const changeAttendanceStatus = catchAsync(async (req, res) => {
     );
   }
 
-  const normalizedStatus = status.trim();
+  const normalizedStatus = status.trim().toLowerCase();
+  if (!["present", "absent", "late", "excused", "holiday"].includes(normalizedStatus)) throw new AppError(400, "Invalid attendance status");
   if (normalizedStatus.length > 50) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
@@ -159,7 +160,7 @@ export const changeAttendanceStatus = catchAsync(async (req, res) => {
 
   const updatedAttendance = await Attendance.findByIdAndUpdate(
     id,
-    { status: normalizedStatus },
+    { status: normalizedStatus, note: String(req.body.note ?? "").slice(0, 2000) },
     { new: true },
   );
 
@@ -238,10 +239,7 @@ export const getClassAttendanceStats = catchAsync(async (req, res) => {
   if (!classInfo) throw new AppError(404, "Class not found");
 
   // 2. Get total students in that grade
-  const studentCount = await User.countDocuments({
-    type: "student",
-    gradeLevel: classInfo.grade,
-  });
+  const studentCount = await StuAssignToClass.countDocuments({ classId });
 
   // 3. Get unique dates where attendance was taken for this class in last 30 days
   const uniqueDates = await Attendance.distinct("date", {
@@ -267,7 +265,7 @@ export const getClassAttendanceStats = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Class attendance stats fetched successfully",
-    data: { percentage },
+    data: { percentage, totalDays, studentCount },
   });
 });
 
@@ -306,6 +304,8 @@ export const getStudentAttendanceStats = catchAsync(async (req, res) => {
   }
 
   const presentCount = await Attendance.countDocuments(query);
+  const { status: _status, ...recordQuery } = query;
+  const recordedCount = await Attendance.countDocuments(recordQuery);
 
   let percentage = 0;
   if (totalDays > 0) {
@@ -316,7 +316,7 @@ export const getStudentAttendanceStats = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Student attendance stats fetched successfully",
-    data: { percentage },
+    data: { percentage, totalDays, recordedCount },
   });
 });
 

@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from "mongoose";
 import { ILesson, LessonModel } from "../interface/lesson.interface";
 
@@ -21,6 +22,8 @@ const lessonSchema: Schema<ILesson> = new Schema(
     versionKey: false,
   }
 );
+
+lessonSchema.plugin(mediaCleanupPlugin, { model: 'Lesson' });
 
 export const Lesson = mongoose.model<ILesson, LessonModel>(
   "Lesson",

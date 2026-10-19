@@ -100,7 +100,7 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
   const isDirectRoom = normalizedParticipantIds.length === 2
 
   if (isDirectRoom) {
-    if (!isCallMode) {
+    {
       await canCreateDirectRoom(
         authUser._id.toString(),
         normalizedParticipantIds,
@@ -168,6 +168,7 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
   let avatarUrl = ''
   if (req.file) {
     const uploadResult = await uploadToCloudinary(req.file.path)
+    if (!uploadResult) throw new AppError(502, 'Photo upload failed')
     if (uploadResult) avatarUrl = uploadResult.secure_url
   }
 
@@ -210,11 +211,16 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
   // If new avatar uploaded, upload to Cloudinary and update
   if (req.file) {
     const uploadResult = await uploadToCloudinary(req.file.path)
+    if (!uploadResult) throw new AppError(502, 'Photo upload failed. The previous photo has been kept.')
     if (uploadResult) {
       room.avatar = uploadResult.secure_url
     }
   }
 
+  if (updates.removeAvatar === true || updates.removeAvatar === 'true') {
+    if (req.file) throw new AppError(400, 'Choose a new photo or remove the current photo');
+    room.avatar = '';
+  }
   if (updates.name !== undefined) room.name = updates.name
 
   if (updates.participants !== undefined) {

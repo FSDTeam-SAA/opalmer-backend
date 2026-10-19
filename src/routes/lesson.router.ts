@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import { Router } from "express";
 import lessonController from "../controllers/lesson.controller";
 import { authorizeTypes, protect } from "../middlewares/auth.middleware";
@@ -10,21 +11,21 @@ router.post(
   protect,
   authorizeTypes("teacher"),
   upload.single("document"),
-  lessonController.createLesson
+  resourceAccess("lessons"), lessonController.createLesson
 );
 
 router.get(
   "/teacher-lessons",
   protect,
   authorizeTypes("teacher"),
-  lessonController.getLessonsByTeacher
+  resourceAccess("lessons"), lessonController.getLessonsByTeacher
 );
 
 router.get(
   "/student-lessons",
   protect,
   authorizeTypes("student"),
-  lessonController.getLessonsByStudent
+  resourceAccess("lessons"), lessonController.getLessonsByStudent
 );
 
 router.get(
@@ -32,14 +33,14 @@ router.get(
   protect,
   authorizeTypes("student"),
   // authorizeTypes("teacher"),
-  lessonController.getAllLessons
+  resourceAccess("lessons"), lessonController.getAllLessons
 );
 
 router.get(
   "/archived",
   protect,
   authorizeTypes("teacher"),
-  lessonController.getArchivedLessons
+  resourceAccess("lessons"), lessonController.getArchivedLessons
 )
 
 
@@ -48,20 +49,20 @@ router.get(
   protect,
   // authorizeTypes("student"),
   authorizeTypes("teacher"),
-  lessonController.getSingleLesson
+  resourceAccess("lessons"), lessonController.getSingleLesson
 );
 
 router.get(
   "/class/:classId",
   protect,
   authorizeTypes("teacher", "parent"),
-  lessonController.getLessonsByClass
+  resourceAccess("lessons"), lessonController.getLessonsByClass
 )
 
 
 router.get(
   "/student/:studentId",
-  lessonController.getLessonsByStudentId
+  resourceAccess("lessons"), lessonController.getLessonsByStudentId
 );
 
 router.put(
@@ -69,14 +70,14 @@ router.put(
   protect,
   authorizeTypes("teacher"),
   upload.single("document"),
-  lessonController.updateLesson
+  resourceAccess("lessons"), lessonController.updateLesson
 );
 
 router.delete(
   "/delete/:lessonId",
   protect,
   authorizeTypes("teacher"),
-  lessonController.deleteLesson
+  resourceAccess("lessons"), lessonController.deleteLesson
 );
 
 
@@ -84,7 +85,7 @@ router.put(
   "/update-status/:lessonId",
   protect,
   authorizeTypes("teacher"),
-  lessonController.updateLessonStatus
+  resourceAccess("lessons"), lessonController.updateLessonStatus
 )
 
 const lessonRouter = router;

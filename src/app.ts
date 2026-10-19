@@ -1,3 +1,5 @@
+import { rateLimit } from "./middlewares/rateLimit.middleware";
+import { trackMediaUploads } from './middlewares/mediaUploads.middleware';
 import cors from "cors";
 import express from "express";
 import { globalErrorHandler } from "./middlewares/globalErrorHandler";
@@ -10,6 +12,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5000",
   "http://localhost:3001",
+  "http://localhost:3000",
   "http://127.0.0.1:5500",
   "https://admin.classpulse.info",
 ];
@@ -38,7 +41,8 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
+app.use("/api/v1", rateLimit(300));
 
 app.use((req, res, next) => {
   next();
@@ -57,7 +61,7 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.use("/api/v1", router);
+app.use("/api/v1", trackMediaUploads, router);
 
 app.use(notFound as never);
 app.use(globalErrorHandler);

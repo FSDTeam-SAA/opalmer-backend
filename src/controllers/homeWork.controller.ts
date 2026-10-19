@@ -1,3 +1,4 @@
+import { assertUser, visibleStudentIds } from "../services/access.service";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
@@ -5,7 +6,7 @@ import { Class } from "../models/class.model";
 import { Homework } from "../models/homework.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
-import { createNotification } from "../sockets/notification.service";
+import { notifyClass, createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import sendResponse from "../utils/sendResponse";
@@ -31,14 +32,16 @@ export const createHomework = catchAsync(async (req, res) => {
   const userExists = await User.findById(data.userId);
   if (!userExists) throw new AppError(httpStatus.BAD_REQUEST, "User not found");
 
-  let files: { public_id: string; url: string }[] = [];
+  let files: { public_id: string; url: string; filename?: string }[] = [];
 
   if (req.files && Array.isArray(req.files)) {
     // Loop through all uploaded files
     for (const file of req.files) {
       const uploadResult = await uploadToCloudinary(file.path);
+      if (!uploadResult) throw new AppError(502, "Attachment upload failed");
       if (uploadResult) {
         files.push({
+          filename: file.originalname,
           public_id: uploadResult.public_id,
           url: uploadResult.secure_url,
         });
@@ -48,38 +51,7 @@ export const createHomework = catchAsync(async (req, res) => {
 
   const homework = await Homework.create({ ...data, file: files });
 
-  // =========================
-  // 1. Get all students of this class
-  // =========================
-  const students = await StuAssignToClass.find({ classId: data.classId });
-
-  // =========================
-  // 2. Send notification to each student
-  // =========================
-  const notifications = students.map((stu) =>
-    createNotification({
-      to: new mongoose.Types.ObjectId(stu.studentId),
-      message: `You have to added new homework: ${data.title}`,
-      type: "homework",
-      id: homework._id,
-    }),
-  );
-
-  await Promise.all(notifications);
-
-  // =========================
-  // 3. Optional: Admin notification (keep if needed)
-  // =========================
-  const adminUsers = await User.findOne({ role: "admin" });
-
-  if (adminUsers) {
-    await createNotification({
-      to: new mongoose.Types.ObjectId(adminUsers._id as any),
-      message: `New homework created: ${data.title}`,
-      type: "homework",
-      id: homework._id,
-    });
-  }
+  if (homework.status !== 'draft') await notifyClass({ classId: homework.classId, type: 'homework', id: homework._id, message: 'New assignment: ' + homework.title, eventKey: 'homework:' + homework._id, notifyStudent: data.notifyStudent !== false && data.notifyStudent !== "false", notifyParent: data.notifyParent !== false && data.notifyParent !== "false" });
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -123,6 +95,9 @@ export const getHomeworkByClass = catchAsync(async (req, res) => {
   if (archived === "true") filter.archived = true;
   else if (archived === "false") filter.archived = false;
 
+  if (['student', 'parent'].includes(req.user?.type)) filter.status = { $ne: 'draft' };
+  if (req.user?.type === 'parent') filter.$or = [{ studentIds: { $size: 0 } }, { studentIds: { $exists: false } }, { studentIds: { $in: await visibleStudentIds(req.user) } }];
+  if (req.user?.type === 'student') filter.$or = [{ studentIds: { $size: 0 } }, { studentIds: { $exists: false } }, { studentIds: req.user._id }];
   const homework = await Homework.find(filter).sort({ created_at: -1 });
   // const homework = await Homework.findByClass(classId)
 
@@ -143,7 +118,12 @@ export const getHomeworkByUser = catchAsync(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(userId))
     throw new AppError(httpStatus.BAD_REQUEST, "Invalid user ID");
 
-  const homework = await Homework.findByUser(userId);
+  const target = await assertUser(req.user, userId);
+  const classIds = target.type === "student" ? await StuAssignToClass.find({ studentId: userId }).distinct("classId") : [];
+  const homework = await Homework.find(target.type === "student" ? {
+    classId: req.query.classId ? { $in: classIds.filter(c => String(c) === String(req.query.classId)) } : { $in: classIds },
+    status: { $ne: "draft" }, $or: [{ studentIds: { $size: 0 } }, { studentIds: { $exists: false } }, { studentIds: userId }],
+  } : { userId });
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -161,15 +141,18 @@ export const updateHomework = catchAsync(async (req, res) => {
 
   if (!mongoose.Types.ObjectId.isValid(id))
     throw new AppError(httpStatus.BAD_REQUEST, "Invalid homework ID");
-  const updates = { ...req.body };
+  const fields = ["title", "description", "dueDate", "status", "pointsPossible", "standards", "archived"];
+  const updates: Record<string, any> = Object.fromEntries(fields.filter(key => key in req.body).map(key => [key, req.body[key]]));
 
   if (req.files && Array.isArray(req.files)) {
-    let files: { public_id: string; url: string }[] = [];
+    let files: { public_id: string; url: string; filename?: string }[] = [];
 
     for (const file of req.files) {
       const uploadResult = await uploadToCloudinary(file.path);
+      if (!uploadResult) throw new AppError(502, "Attachment upload failed");
       if (uploadResult) {
         files.push({
+          filename: file.originalname,
           public_id: uploadResult.public_id,
           url: uploadResult.secure_url,
         });

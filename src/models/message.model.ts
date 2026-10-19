@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from 'mongoose'
 import { IMessage, MessageModel } from '../interface/message.interface'
 
@@ -26,6 +27,8 @@ const messageSchema: Schema<IMessage> = new Schema(
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
+
+messageSchema.plugin(mediaCleanupPlugin, { model: 'Message' });
 
 export const Message = mongoose.model<IMessage, MessageModel>(
   'Message',

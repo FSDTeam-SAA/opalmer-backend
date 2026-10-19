@@ -1,92 +1,33 @@
-import { NextFunction, Request, Response } from "express";
-import httpStatus from "http-status";
-import jwt, { JwtPayload } from "jsonwebtoken";
-import AppError from "../errors/AppError";
-import { User } from "../models/user.model";
+import { RequestHandler } from 'express';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import AppError from '../errors/AppError';
+import { User } from '../models/user.model';
+import { activeAccount } from '../services/access.service';
+import { getRequiredEnv } from '../config/env';
 
-type AuthTokenPayload = JwtPayload & {
-  userId?: string;
-  tokenVersion?: number;
-};
-
-// ✅ Protect route (JWT authentication)
-export const protect = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) throw new AppError(httpStatus.UNAUTHORIZED, "Token not found");
-
+export const jwtSecret = () => getRequiredEnv('JWT_SECRET');
+export const authenticate = (purpose: 'access' | '2fa' = 'access'): RequestHandler => async (req, _res, next) => {
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "default_secret"!
-    ) as AuthTokenPayload;
-
-    // Fetch user by ID from token
-    const user = await User.findById(decoded.userId); // userId set in login token
-    if (!user) {
-      throw new AppError(httpStatus.UNAUTHORIZED, "User not found");
-    }
-
-    const currentTokenVersion = user.tokenVersion ?? 0;
-    const decodedTokenVersion = decoded.tokenVersion ?? 0;
-    if (currentTokenVersion !== decodedTokenVersion) {
-      throw new AppError(httpStatus.UNAUTHORIZED, "Session expired");
-    }
-
-    // Attach user to request
-
-    
-
-    // req.user = decoded;
-    req.user = user;
+    if (purpose === 'access' && req.user) return next();
+    const token = req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1];
+    if (!token) throw new AppError(401, 'Authentication required');
+    const decoded = jwt.verify(token, jwtSecret(), { algorithms: ['HS256'] }) as JwtPayload;
+    if (!decoded.userId || (decoded.purpose ?? 'access') !== purpose) throw new AppError(401, 'Invalid session');
+    const user = await User.findById(decoded.userId);
+    if (!activeAccount(user) || (user!.tokenVersion ?? 0) !== (decoded.tokenVersion ?? 0)) throw new AppError(401, 'Session expired');
+    req.user = user!;
     next();
-  } catch (err) {
-    throw new AppError(
-      httpStatus.UNAUTHORIZED,
-      "Invalid or expired token " + err
-    );
-  }
+  } catch (error) { next(error instanceof AppError ? error : new AppError(401, 'Invalid or expired session')); }
 };
-
-// ✅ Role-based authorization middleware
-export const authorizeRoles = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
-    }
-    if (!roles.includes(req.user.role)) {
-      throw new AppError(
-        httpStatus.FORBIDDEN,
-        "Access denied. Insufficient role permissions."
-      );
-    }
-    next();
-  };
+export const protect = authenticate();
+export const protectChallenge = authenticate('2fa');
+export const authorizeRoles = (...roles: string[]): RequestHandler => (req, _res, next) => {
+  if (!req.user) return next(new AppError(401, 'Authentication required'));
+  if (!roles.includes(req.user.role)) return next(new AppError(403, 'Role access denied'));
+  next();
 };
-
-// ✅ Type-based authorization middleware
-export const authorizeTypes = (...types: string[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      throw new AppError(httpStatus.UNAUTHORIZED, "User not authenticated");
-    }
-
-    if (req.user.role === 'admin' || req.user.role === 'administrator') {
-      return next();
-    }
-
-    const userTypes = req.user.type;
-    const hasType = types.includes(userTypes);
-
-    if (!hasType) {
-      throw new AppError(
-        httpStatus.FORBIDDEN,
-        "Access denied. Insufficient type permissions."
-      );
-    }
-    next();
-  };
+export const authorizeTypes = (...types: string[]): RequestHandler => (req, _res, next) => {
+  if (!req.user) return next(new AppError(401, 'Authentication required'));
+  if (!['admin', 'administrator'].includes(req.user.role) && !types.includes(req.user.type)) return next(new AppError(403, 'Role access denied'));
+  next();
 };

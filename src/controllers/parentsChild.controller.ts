@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+import { GuardianInvitation } from "../models/guardianInvitation.model";
 import { Request, Response } from 'express'
 import mongoose from 'mongoose'
 import { User } from '../models/user.model'
@@ -61,7 +63,10 @@ export const createParentsChild = catchAsync(
       throw new AppError(409, 'Relation already exists.')
     }
 
-    const relation = await ParentsChild.create({ parentId, childId })
+    const codeHash = crypto.createHash('sha256').update(String(req.body.invitationCode ?? '').trim().toUpperCase()).digest('hex');
+    const invitation = await GuardianInvitation.findOneAndUpdate({ childId, codeHash, parentEmail: String(authUser.email ?? '').toLowerCase(), expiresAt: { $gt: new Date() }, usedAt: { $exists: false } }, { $set: { usedAt: new Date(), usedBy: parentId } }, { new: true });
+    if (!invitation) throw new AppError(403, 'A valid school invitation for your email is required to link this student');
+    const relation = await ParentsChild.findOneAndUpdate({ parentId, childId }, { $setOnInsert: { parentId, childId } }, { new: true, upsert: true })
 
     sendResponse(res, {
       statusCode: 201,
@@ -119,7 +124,7 @@ export const getChildrenByParentId = catchAsync(
 
     const children = await ParentsChild.find({ parentId }).populate(
       'childId',
-      'username email age gradeLevel avatar'
+      'username Id email age gradeLevel avatar'
     )
     const validChildren = children.filter((relation: any) => relation.childId)
 
@@ -129,14 +134,14 @@ export const getChildrenByParentId = catchAsync(
         let childData = relation.childId;
         if (childData && childData._id) {
           // Fetch completed quiz results for this child
-          const quizResults = await QuizResult.find({ 
-            studentId: childData._id, 
-            'progress.status': 'completed' 
+          const quizResults = await QuizResult.find({
+            studentId: childData._id,
+            'progress.status': 'completed', gradeStatus: 'released'
           });
 
           let averagePercentage = 0;
           let progressScore = 0;
-          
+
           if (quizResults.length > 0) {
             const totalPercentage = quizResults.reduce((acc: number, curr: any) => acc + (curr.percentage || 0), 0);
             averagePercentage = totalPercentage / quizResults.length;

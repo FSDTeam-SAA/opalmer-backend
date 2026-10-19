@@ -1,3 +1,5 @@
+import { gradeDetail, reviewGrade, releaseGrade } from "../controllers/gradeReview.controller";
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import { Router } from "express";
 import gradingController, {
   getSingleStudentGrading,
@@ -6,47 +8,50 @@ import { authorizeTypes, protect } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
+router.get("/results/:resultId", protect, authorizeTypes("teacher"), gradeDetail);
+router.patch("/results/:resultId/review", protect, authorizeTypes("teacher"), reviewGrade);
+router.post("/results/:resultId/release", protect, authorizeTypes("teacher"), releaseGrade);
 
 router.post(
   "/sessions",
   protect,
   authorizeTypes("teacher"),
-  gradingController.createSession,
+  resourceAccess("grading"), gradingController.createSession,
 );
 
 router.get(
   "/sessions",
   protect,
   authorizeTypes("teacher"),
-  gradingController.listTeacherSessions,
+  resourceAccess("grading"), gradingController.listTeacherSessions,
 );
 
 router.get(
   "/student/sessions",
   protect,
   authorizeTypes("student"),
-  gradingController.listStudentSessions,
+  resourceAccess("grading"), gradingController.listStudentSessions,
 );
 
 router.get(
   "/student/progress",
   protect,
   authorizeTypes("student"),
-  gradingController.getStudentProgress,
+  resourceAccess("grading"), gradingController.getStudentProgress,
 );
 
 router.get(
   "/child-progress",
   protect,
   authorizeTypes("parent"),
-  gradingController.getChildProgress,
+  resourceAccess("grading"), gradingController.getChildProgress,
 );
 
 router.get(
   "/sessions/:sessionId/results",
   protect,
   authorizeTypes("teacher"),
-  gradingController.getSessionResults,
+  resourceAccess("grading"), gradingController.getSessionResults,
 );
 
 router.post(
@@ -54,65 +59,65 @@ router.post(
   protect,
   authorizeTypes("teacher"),
   upload.single("image"),
-  gradingController.uploadQuestionImage,
+  resourceAccess("grading"), gradingController.uploadQuestionImage,
 );
 
 router.post(
   "/sessions/:sessionId/questions",
   protect,
   authorizeTypes("teacher"),
-  gradingController.upsertQuestions,
+  resourceAccess("grading"), gradingController.upsertQuestions,
 );
 
 router.get(
   "/sessions/:sessionId/questions",
   protect,
   authorizeTypes("teacher", "student"),
-  gradingController.getQuestions,
+  resourceAccess("grading"), gradingController.getQuestions,
 );
 
 router.patch(
   "/sessions/:sessionId/publish",
   protect,
   authorizeTypes("teacher"),
-  gradingController.publishSession,
+  resourceAccess("grading"), gradingController.publishSession,
 );
 
 router.patch(
   "/sessions/:sessionId",
   protect,
   authorizeTypes("teacher"),
-  gradingController.updateSession,
+  resourceAccess("grading"), gradingController.updateSession,
 );
 
 router.get(
   "/sessions/:sessionId",
   protect,
   authorizeTypes("teacher"),
-  gradingController.getTeacherSession,
+  resourceAccess("grading"), gradingController.getTeacherSession,
 );
 
 router.post(
   "/sessions/:sessionId/start",
   protect,
   authorizeTypes("student"),
-  gradingController.startSession,
+  resourceAccess("grading"), gradingController.startSession,
 );
 
 router.post(
   "/sessions/:sessionId/save-progress",
   protect,
   authorizeTypes("student"),
-  gradingController.saveProgress,
+  resourceAccess("grading"), gradingController.saveProgress,
 );
 
 router.post(
   "/sessions/:sessionId/submit",
   protect,
   authorizeTypes("student"),
-  gradingController.submitSession,
+  resourceAccess("grading"), gradingController.submitSession,
 );
 
-router.get("/:studentId", getSingleStudentGrading);
+router.get("/:studentId", resourceAccess("grading"), getSingleStudentGrading);
 
 export default router;

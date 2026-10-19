@@ -12,9 +12,12 @@ const attendanceSchema: Schema<IAttendance> = new Schema(
       default: 'absent',
     },
     date: { type: Date, default: Date.now },
+    note: { type: String, default: "" },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
+
+attendanceSchema.index({ classId: 1, userId: 1, date: 1 }, { unique: true });
 
 export const Attendance = mongoose.model<IAttendance, AttendanceModel>(
   'Attendance',

@@ -1,3 +1,5 @@
+import { visibleStudentIds } from "../services/access.service";
+import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import { Behavior } from "../models/behavior.model";
@@ -70,7 +72,8 @@ const getSingleBehavior = catchAsync(async (req, res) => {
 
 const getAllBehaviors = catchAsync(async (req, res) => {
   try {
-    const result = await Behavior.find()
+    const students = await visibleStudentIds(req.user);
+    const result = await Behavior.find({ studentId: { $in: students }, ...(req.user?.type === "parent" ? { parentVisible: { $ne: false } } : {}) })
       .populate({
         path: "studentId",
         select: "username email role type",
@@ -163,7 +166,7 @@ const getBehaviorByStudent = catchAsync(async (req, res) => {
     }
   }
 
-  const result = await Behavior.find({ studentId })
+  const result = await Behavior.find({ studentId, ...(req.query.classId ? { classId: req.query.classId } : {}), ...(req.user?.type === "parent" ? { parentVisible: { $ne: false } } : {}) })
     .populate({
       path: "studentId",
       select: "username email role type",
@@ -256,7 +259,7 @@ const getBehaviorForMyChild = catchAsync(async (req, res) => {
     }
 
     // behavior fetch
-    const result = await Behavior.find({ studentId });
+    const result = await Behavior.find({ studentId, ...(req.query.classId ? { classId: req.query.classId } : {}), ...(req.user?.type === "parent" ? { parentVisible: { $ne: false } } : {}) });
 
     return sendResponse(res, {
       statusCode: 200,
@@ -276,7 +279,7 @@ const getBehaviorsByStudentId = catchAsync(async (req, res) => {
     // =========================
     // 1. Get all behaviors
     // =========================
-    const behaviors = await Behavior.find({ studentId })
+    const behaviors = await Behavior.find({ studentId, ...(req.query.classId ? { classId: req.query.classId } : {}), ...(req.user?.type === "parent" ? { parentVisible: { $ne: false } } : {}) })
       .populate({
         path: "studentId",
         select: "username email role type",

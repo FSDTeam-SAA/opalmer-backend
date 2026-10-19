@@ -11,7 +11,7 @@ export const getUserNotifications = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.params
 
-    const notifications = await Notification.find({ to: userId }).sort({
+    const notifications = await Notification.find({ to: userId }).limit(200).sort({
       createdAt: -1,
     })
 
@@ -48,8 +48,8 @@ export const markOneAsRead = catchAsync(
   async (req: Request, res: Response) => {
     const { notificationId } = req.params
 
-    const notification = await Notification.findByIdAndUpdate(
-      notificationId,
+    const notification = await Notification.findOneAndUpdate(
+      { _id: notificationId, to: req.user!._id },
       { isViewed: true },
       { new: true }
     )

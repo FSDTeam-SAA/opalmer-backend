@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from 'mongoose'
 import { IQuizQA, QuizQAModel } from '../interface/quizQA.interface'
 
@@ -30,6 +31,8 @@ const quizQASchema: Schema<IQuizQA> = new Schema(
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
+
+quizQASchema.plugin(mediaCleanupPlugin, { model: 'QuizQA' });
 
 export const QuizQA = mongoose.model<IQuizQA, QuizQAModel>(
   'QuizQA',

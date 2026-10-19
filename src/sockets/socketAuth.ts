@@ -1,3 +1,5 @@
+import { jwtSecret } from "../middlewares/auth.middleware";
+import { activeAccount } from "../services/access.service";
 import { Socket } from 'socket.io'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { User } from '../models/user.model'
@@ -21,13 +23,13 @@ export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) =
     console.log(`[Socket ${socketId}] Token found, verifying JWT...`);
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'default_secret'
+      jwtSecret()
     ) as SocketAuthPayload;
 
     console.log(`[Socket ${socketId}] JWT verified for userId: ${decoded.userId}. Fetching user from DB...`);
-    const user = await User.findById(decoded.userId).select('_id type username avatar tokenVersion');
+    const user = await User.findById(decoded.userId).select('_id type role schoolId state isActive username avatar tokenVersion');
     
-    if (!user) {
+    if (!user || !activeAccount(user) || (decoded.purpose ?? "access") !== "access") {
       console.error(`[Socket ${socketId}] Auth failed: User ${decoded.userId} not found in database`);
       return next(new Error('Authentication error: User not found'));
     }
@@ -42,6 +44,7 @@ export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) =
 
     console.log(`[Socket ${socketId}] Auth SUCCESS for ${user.username}`);
     (socket as any).user = user;
+    socket.join(`user:${user!._id}`);
     next();
   } catch (err) {
     console.error(`[Socket ${socketId}] Auth failed: Unexpected error:`, err);

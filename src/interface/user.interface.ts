@@ -32,6 +32,15 @@ export interface IUser extends Document {
   isTwoFactorAuthEnabled: boolean
   hashedOtp?: string
   otpExpires?: Date
+  passwordResetExpires?: Date
+  language?: "en" | "es"
+  subjects?: string[]
+  locationState?: string
+  accommodations?: string
+  notes?: string
+  notificationPreferences?: Record<string, boolean>
+  communicationPreferences?: Record<string, any>
+  deviceTokens?: string[]
 }
 
 // Static methods interface

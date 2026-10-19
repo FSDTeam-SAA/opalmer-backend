@@ -35,7 +35,7 @@ export const connectDB = async () => {
     const mongoUri = getRequiredEnv('MONGO_URI')
     configureMongoDns(mongoUri)
 
-    await mongoose.connect(mongoUri)
+    await mongoose.connect(mongoUri, { autoIndex: process.env.NODE_ENV !== "production" })
     console.log('MongoDB connected')
   } catch (error) {
     console.error('MongoDB connection failed:', error)

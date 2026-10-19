@@ -4,11 +4,11 @@ import catchAsync from '../utils/catchAsync'
 import httpStatus from 'http-status'
 import sendResponse from '../utils/sendResponse'
 
-export const getUserStats = catchAsync(async (_req: Request, res: Response) => {
+export const getUserStats = catchAsync(async (req: Request, res: Response) => {
   // Count each type
-  const totalStudents = await User.countDocuments({ type: 'student' })
-  const totalParents = await User.countDocuments({ type: 'parent' })
-  const totalTeachers = await User.countDocuments({ type: 'teacher' })
+  const totalStudents = await User.countDocuments({ type: 'student', ...(req.user?.role === 'admin' ? {} : { schoolId: req.user?.schoolId }) })
+  const totalParents = await User.countDocuments({ type: 'parent', ...(req.user?.role === 'admin' ? {} : { schoolId: req.user?.schoolId }) })
+  const totalTeachers = await User.countDocuments({ type: 'teacher', ...(req.user?.role === 'admin' ? {} : { schoolId: req.user?.schoolId }) })
 
   return sendResponse(res, {
     statusCode: httpStatus.OK,

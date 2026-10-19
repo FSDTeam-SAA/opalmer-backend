@@ -1,3 +1,4 @@
+import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from 'express'
 import {
   protect,
@@ -20,29 +21,29 @@ const router = express.Router()
 // Create
 router.post('/',
     // protect, authorizeRoles('administrator'),
-createLearningTip)
+resourceAccess("learning-tips"), createLearningTip)
 
 // Get by adminId (paginated)
-router.get('/by-admin', getLearningTipsByAdmin)
+router.get('/by-admin', resourceAccess("learning-tips"), getLearningTipsByAdmin)
 
 // Get by schoolId
-router.get('/by-school', getLearningTipsBySchool)
+router.get('/by-school', resourceAccess("learning-tips"), getLearningTipsBySchool)
 
 // Get tips aggregated across all schools for the authenticated parent's children
 router.get(
   '/by-parent/me',
   protect,
   authorizeTypes('parent'),
-  getLearningTipsByParent
+  resourceAccess("learning-tips"), getLearningTipsByParent
 )
 
 // Single
-router.get('/:id', getSingleLearningTip)
+router.get('/:id', resourceAccess("learning-tips"), getSingleLearningTip)
 
 // Update
-router.patch('/:id', updateLearningTip)
+router.patch('/:id', resourceAccess("learning-tips"), updateLearningTip)
 
 // Delete
-router.delete('/:id', deleteLearningTip)
+router.delete('/:id', resourceAccess("learning-tips"), deleteLearningTip)
 
 export default router

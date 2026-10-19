@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from 'mongoose'
 import { IGroupWork, GroupWorkModel } from '../interface/groupWork.interface'
 
@@ -13,6 +14,8 @@ const groupWorkSchema: Schema<IGroupWork> = new Schema(
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
+
+groupWorkSchema.plugin(mediaCleanupPlugin, { model: 'GroupWork' });
 
 export const GroupWork = mongoose.model<IGroupWork, GroupWorkModel>(
   'GroupWork',

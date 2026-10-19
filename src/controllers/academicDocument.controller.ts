@@ -1,3 +1,4 @@
+import { StuAssignToClass } from '../models/stuAssignToClass.model';
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import AcademicDocument from "../models/academicDocument.model";
@@ -23,7 +24,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       throw new AppError(400, "You are not a teacher of any school");
     }
 
-    const teacherClass = await Class.findOne({ teacherId: user._id });
+    const teacherClass = await Class.findOne({ _id: req.body.classId, teacherId: user._id });
     if (!teacherClass) {
       throw new AppError(400, "You are not a teacher of any class");
     }
@@ -51,9 +52,12 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       );
     }
 
+    if (!await StuAssignToClass.exists({ classId: teacherClass._id, studentId })) throw new AppError(403, "Student is not enrolled in the selected class");
+    if (!req.file) throw new AppError(400, "Select a document to upload");
     let document = { public_id: "", url: "" };
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path);
+      if (!uploadResult) throw new AppError(502, "Document upload failed. Please retry.");
       if (uploadResult) {
         document = {
           public_id: uploadResult.public_id,
@@ -273,9 +277,10 @@ const updateAcademicDocument = catchAsync(async (req, res) => {
       throw new AppError(400, "Academic document not found");
     }
 
-    let document = { public_id: "", url: "" };
+    let document = doc.document;
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path);
+      if (!uploadResult) throw new AppError(502, "Attachment upload failed. The previous file has been kept.");
       if (uploadResult) {
         document = {
           public_id: uploadResult.public_id,
@@ -284,6 +289,10 @@ const updateAcademicDocument = catchAsync(async (req, res) => {
       }
     }
 
+    if (req.body.removeDocument === true || req.body.removeDocument === "true") {
+      if (req.file) throw new AppError(400, "Choose a replacement file or remove the current file");
+      document = { public_id: "", url: "" };
+    }
     const updatedDocument = await AcademicDocument.findByIdAndUpdate(
       id,
       {

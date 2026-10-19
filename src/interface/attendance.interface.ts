@@ -5,6 +5,7 @@ export interface IAttendance extends Document {
   userId: Types.ObjectId
   status: string
   date: Date
+  note?: string
   created_at?: Date
   updated_at?: Date
 }

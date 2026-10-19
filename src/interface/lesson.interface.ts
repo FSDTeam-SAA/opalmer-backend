@@ -7,7 +7,7 @@ export interface ILesson extends Document {
   classId: Types.ObjectId;
   objective: string;
   note: string;
-  document: string;
+  document: { public_id: string; url: string };
   isArchived: boolean;
 }
 

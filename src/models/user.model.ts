@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import bcrypt from 'bcrypt'
 import mongoose, { Schema } from 'mongoose'
 import { IUser, UserModel } from '../interface/user.interface'
@@ -35,8 +36,8 @@ const userSchema: Schema = new Schema<IUser>(
       verified: { type: Boolean, default: false },
       token: { type: String, default: '' },
     },
-    password_reset_token: { type: String, default: '' },
-    refreshToken: { type: String, default: '' },
+    password_reset_token: { type: String, default: '', select: false },
+    refreshToken: { type: String, default: '', select: false },
     tokenVersion: { type: Number, default: 0 },
     credit: { type: Number, default: null },
     fine: { type: Number },
@@ -46,6 +47,15 @@ const userSchema: Schema = new Schema<IUser>(
     isTwoFactorAuthEnabled: { type: Boolean, default: false },
     hashedOtp: { type: String, select: false, default: '' },
     otpExpires: { type: Date, select: false },
+    passwordResetExpires: { type: Date, select: false },
+    language: { type: String, enum: ['en', 'es'], default: 'en' },
+    subjects: { type: [String], default: [] },
+    locationState: { type: String, trim: true, maxlength: 80, default: '' },
+    accommodations: { type: String, default: '' },
+    notes: { type: String, default: '' },
+    notificationPreferences: { type: Schema.Types.Mixed, default: {} },
+    communicationPreferences: { type: Schema.Types.Mixed, default: {} },
+    deviceTokens: { type: [String], default: [], select: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
@@ -81,5 +91,7 @@ userSchema.statics.isPasswordMatched = async function (
 ) {
   return await bcrypt.compare(plainTextPassword, hashPassword)
 }
+
+userSchema.plugin(mediaCleanupPlugin, { model: 'User' });
 
 export const User = mongoose.model<IUser, UserModel>('User', userSchema)

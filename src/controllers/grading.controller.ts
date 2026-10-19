@@ -1,3 +1,4 @@
+import { startAssessment, saveAssessment } from "../services/assessment.service";
 import httpStatus from "http-status";
 import { Types } from "mongoose";
 import AppError from "../errors/AppError";
@@ -76,20 +77,7 @@ const ensureTeacherOwnsSession = async (
   return session;
 };
 
-const isStudentInClass = async (studentId: string, classData: any) => {
-  const assigned = await StuAssignToClass.exists({
-    studentId,
-    classId: classData._id,
-  });
-  if (assigned) return true;
-
-  const student = await User.findById(studentId).select("type gradeLevel");
-  return Boolean(
-    student &&
-    student.type === "student" &&
-    Number(student.gradeLevel) === Number(classData.grade),
-  );
-};
+const isStudentInClass = async (studentId: string, classData: any) => Boolean(await StuAssignToClass.exists({ studentId, classId: classData._id }));
 
 const ensureStudentCanAccessSession = async (
   studentId: string,
@@ -135,7 +123,7 @@ const withSessionMeta = async (session: any, studentId?: string) => {
   const questionCount = await getQuestionCount(obj._id.toString());
   const result = studentId
     ? await QuizResult.findOne({ quizId: obj._id, studentId }).select(
-        "score percentage progress createdAt updatedAt",
+        "score percentage progress gradeStatus createdAt updatedAt",
       )
     : null;
 
@@ -146,8 +134,9 @@ const withSessionMeta = async (session: any, studentId?: string) => {
     result: result
       ? {
           _id: result._id,
-          score: result.score,
-          percentage: result.percentage,
+          gradeStatus: result.gradeStatus ?? "pending_review",
+          score: result.gradeStatus === "released" ? result.score : undefined,
+          percentage: result.gradeStatus === "released" ? result.percentage : undefined,
           progress: result.progress,
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
@@ -305,6 +294,7 @@ const buildProgressRecords = async (studentId: string, classId?: string) => {
     studentId,
     quizId: { $in: sessionIds },
     "progress.status": "completed",
+    gradeStatus: "released",
   })
     .populate({
       path: "quizId",
@@ -357,12 +347,7 @@ const getClassRoster = async (classData: any) => {
     .map((relation: any) => relation.studentId)
     .filter(Boolean);
 
-  if (assignedStudents.length) return assignedStudents;
-
-  return User.find({
-    type: "student",
-    gradeLevel: classData.grade,
-  }).select("username Id gradeLevel avatar");
+  return assignedStudents;
 };
 
 const createSession = catchAsync(async (req, res) => {
@@ -518,6 +503,8 @@ const upsertQuestions = catchAsync(async (req, res) => {
     req.params.sessionId,
   );
   const questions = validateQuestions(req.body.questions);
+  if (new Set(questions.map(q => q.question)).size !== questions.length) throw new AppError(400, "Question text must be unique");
+  if (await QuizResult.exists({ quizId: session._id })) throw new AppError(409, "Questions cannot change after students start an assessment");
 
   const qa = await QuizQA.findOneAndUpdate(
     { quizId: session._id },
@@ -613,148 +600,9 @@ const listStudentSessions = catchAsync(async (req, res) => {
   });
 });
 
-const startSession = catchAsync(async (req, res) => {
-  const studentId = requireCurrentUserId(req);
-  const { session } = await ensureStudentCanAccessSession(
-    studentId,
-    req.params.sessionId,
-  );
-
-  const existing = await QuizResult.findOne({
-    quizId: session._id,
-    studentId,
-  });
-  if (existing?.progress?.status === "completed") {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      "You have already submitted this grading session",
-    );
-  }
-
-  const result =
-    existing ?? (await getOrCreateResult(session._id.toString(), studentId));
-
-  return sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: existing
-      ? "Grading session already started"
-      : "Grading session started successfully",
-    data: result,
-  });
-});
-
-const saveProgress = catchAsync(async (req, res) => {
-  const studentId = requireCurrentUserId(req);
-  const { session } = await ensureStudentCanAccessSession(
-    studentId,
-    req.params.sessionId,
-  );
-  const { question, selectedAnswer, remainingTime } = req.body;
-
-  if (!question?.toString()) {
-    throw new AppError(httpStatus.BAD_REQUEST, "question is required");
-  }
-
-  const result: any = await getOrCreateResult(
-    session._id.toString(),
-    studentId,
-  );
-  if (result.progress?.status === "completed") {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      "You have already submitted this grading session",
-    );
-  }
-
-  mergeSubmittedAnswers(result, [
-    {
-      question: question.toString(),
-      selectedAnswer: selectedAnswer?.toString() ?? "",
-    },
-  ]);
-  if (remainingTime !== undefined) {
-    result.progress.remainingTime = Number(remainingTime) || 0;
-  }
-
-  await result.save();
-
-  return sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Grading progress saved successfully",
-    data: result,
-  });
-});
-
-const submitSession = catchAsync(async (req, res) => {
-  const studentId = requireCurrentUserId(req);
-  const { session } = await ensureStudentCanAccessSession(
-    studentId,
-    req.params.sessionId,
-  );
-  const result: any = await getOrCreateResult(
-    session._id.toString(),
-    studentId,
-  );
-
-  if (result.progress?.status === "completed") {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      "You have already submitted this grading session",
-    );
-  }
-
-  if (Array.isArray(req.body.answers)) {
-    mergeSubmittedAnswers(result, req.body.answers);
-  }
-
-  const qa = await QuizQA.findOne({ quizId: session._id });
-  if (!qa) {
-    throw new AppError(httpStatus.NOT_FOUND, "Questions not found");
-  }
-
-  let correctCount = 0;
-  result.answers = result.answers.map((answer: any) => {
-    const correctAnswer = qa.questions.find(
-      (question) => question.question === answer.question,
-    )?.answer;
-    const isCorrect = answer.selectedAnswer === correctAnswer;
-    if (isCorrect) correctCount++;
-    const plainAnswer =
-      typeof answer.toObject === "function" ? answer.toObject() : answer;
-    return { ...plainAnswer, isCorrect };
-  });
-
-  const totalQuestions = qa.questions.length;
-  const percentage = totalQuestions ? (correctCount / totalQuestions) * 100 : 0;
-
-  result.score = correctCount;
-  result.percentage = percentage;
-  result.progress.answeredCount = result.answers.filter((answer: any) =>
-    Boolean(answer.selectedAnswer),
-  ).length;
-  result.progress.totalQuestions = totalQuestions;
-  result.progress.remainingTime = 0;
-  result.progress.status = "completed";
-
-  await result.save();
-
-  return sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Grading session submitted successfully",
-    data: {
-      _id: result._id,
-      sessionId: session._id,
-      score: correctCount,
-      totalQuestions,
-      percentage,
-      progress: result.progress,
-      answers: result.answers,
-    },
-  });
-});
+const startSession = catchAsync(async (req, res) => { res.json({ success: true, data: await startAssessment(req.user, req.params.sessionId) }); });
+const saveProgress = catchAsync(async (req, res) => { res.json({ success: true, data: await saveAssessment(req.user, req.params.sessionId, [{ question: req.body.question, selectedAnswer: req.body.selectedAnswer }]) }); });
+const submitSession = catchAsync(async (req, res) => { res.json({ success: true, data: await saveAssessment(req.user, req.params.sessionId, req.body.answers ?? [], true) }); });
 
 const getStudentProgress = catchAsync(async (req, res) => {
   const studentId = requireCurrentUserId(req);
@@ -875,15 +723,15 @@ export const getSingleStudentGrading = catchAsync(async (req, res) => {
   // =====================
   // 1. FETCH ALL GRADING
   // =====================
+  const quizIds = req.query.classId ? await Quiz.find({ classId: req.query.classId }).distinct("_id") : null;
   const gradingData = await QuizResult.find({
-    studentId,
+    studentId, ...(quizIds ? { quizId: { $in: quizIds } } : {}),
+    ...(["parent", "student"].includes(req.user?.type) ? { gradeStatus: "released" } : {}),
   })
-    .populate("quizId", "title description")
+    .populate("quizId", "title description classId")
     .sort({ createdAt: -1 });
 
-  if (!gradingData || gradingData.length === 0) {
-    throw new AppError(404, "No grading found for this student");
-  }
+
 
   // =====================
   // 2. FORMAT RESPONSE
@@ -894,7 +742,7 @@ export const getSingleStudentGrading = catchAsync(async (req, res) => {
     score: item.score,
     percentage: item.percentage,
     progress: item.progress,
-    status: item.progress?.status,
+    status: item.progress?.status, gradeStatus: item.gradeStatus ?? "pending_review", createdAt: item.createdAt,
     answeredCount: item.progress?.answeredCount,
     totalQuestions: item.progress?.totalQuestions,
   }));

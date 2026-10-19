@@ -1,3 +1,4 @@
+import { lessonAudience, visibleClassIds } from "../services/access.service";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import { Class } from "../models/class.model";
@@ -79,8 +80,8 @@ const createLesson = catchAsync(async (req, res) => {
 
     const adminUsers = await User.findOne({ role: "admin" });
 
-    await createNotification({
-      to: new mongoose.Types.ObjectId(adminUsers!._id as any),
+    if (adminUsers) await createNotification({
+      to: new mongoose.Types.ObjectId(adminUsers._id as any),
       message: `New lesson created: ${title} in ${classInfo.grade} ${classInfo.subject}`,
       type: "lesson",
       id: result._id as any,
@@ -176,7 +177,7 @@ const getLessonsByStudent = catchAsync(async (req, res) => {
 
 const getAllLessons = catchAsync(async (req, res) => {
   try {
-    const result = await Lesson.find()
+    const result = await Lesson.find({ classId: { $in: await visibleClassIds(req.user) }, ...await lessonAudience(req.user) })
       .populate({
         path: "studentId",
         select: "username email role type",
@@ -252,16 +253,15 @@ const updateLesson = catchAsync(async (req, res) => {
       throw new AppError(400, "Class not found");
     }
 
-    let document = { public_id: "", url: "" };
+    let document = lesson.document;
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path);
-
-      if (uploadResult) {
-        document = {
-          public_id: uploadResult.public_id,
-          url: uploadResult.secure_url,
-        };
-      }
+      if (!uploadResult) throw new AppError(502, "Attachment upload failed. The previous file has been kept.");
+      document = { public_id: uploadResult.public_id, url: uploadResult.secure_url };
+    }
+    if (req.body.removeDocument === true || req.body.removeDocument === "true") {
+      if (req.file) throw new AppError(400, "Choose a replacement file or remove the current file");
+      document = { public_id: "", url: "" };
     }
 
     const updatedLesson = await Lesson.findByIdAndUpdate(
@@ -317,7 +317,7 @@ const getLessonsByClass = catchAsync(async (req, res) => {
   try {
     const { classId } = req.params;
 
-    const result = await Lesson.find({ classId })
+    const result = await Lesson.find({ classId, ...await lessonAudience(req.user) })
       .populate({
         path: "studentId",
         select: "username email role type",
@@ -376,7 +376,7 @@ const updateLessonStatus = catchAsync(async (req, res) => {
 
 const getArchivedLessons = catchAsync(async (req, res) => {
   try {
-    const result = await Lesson.find({ isArchived: true })
+    const result = await Lesson.find({ isArchived: true, classId: { $in: await visibleClassIds(req.user) }, ...await lessonAudience(req.user) })
       .populate({
         path: "studentId",
         select: "username email role type",
@@ -405,7 +405,8 @@ const getLessonsByStudentId = catchAsync(async (req, res) => {
   try {
     const { studentId } = req.params;
 
-    const result = await Lesson.find({ studentId })
+    const classIds = await StuAssignToClass.find({ studentId }).distinct("classId");
+    const result = await Lesson.find({ classId: { $in: classIds }, $or: [{ studentId }, { studentId: null }] })
       .populate({
         path: "studentId",
         select: "username email role type",

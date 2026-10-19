@@ -1,3 +1,4 @@
+import { mediaCleanupPlugin } from '../utils/mediaCleanup.plugin';
 import mongoose, { Schema } from 'mongoose'
 import { IQuiz, QuizModel } from '../interface/quiz.interface'
 
@@ -23,5 +24,7 @@ const quizSchema: Schema<IQuiz> = new Schema(
 quizSchema.statics.findByTitle = async function (title: string) {
   return await this.find({ title: { $regex: title, $options: 'i' } })
 }
+
+quizSchema.plugin(mediaCleanupPlugin, { model: 'Quiz' });
 
 export const Quiz = mongoose.model<IQuiz, QuizModel>('Quiz', quizSchema)

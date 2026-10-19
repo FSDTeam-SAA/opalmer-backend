@@ -1,3 +1,5 @@
+import { ParentsChild } from "../models/parentsChild.model";
+import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import mongoose from 'mongoose'
 import httpStatus from 'http-status'
 import AppError from '../errors/AppError'
@@ -50,6 +52,8 @@ export const createGroupWork = catchAsync(async (req, res) => {
     }
   }
 
+  const enrolled = await StuAssignToClass.countDocuments({ classId, studentId: { $in: userId } });
+  if (enrolled !== userId.length) throw new AppError(400, "Every group member must be enrolled in the class");
   const foundMembers = await User.find({ _id: { $in: userId } }).select('_id')
   if (foundMembers.length !== userId.length) {
     throw new AppError(
@@ -103,6 +107,8 @@ export const getGroupWorkByClass = catchAsync(async (req, res) => {
   if (archived === 'true') filter.archived = true
   else if (archived === 'false') filter.archived = false
 
+  if (req.user?.type === 'student') filter.userId = req.user._id;
+  if (req.user?.type === 'parent') filter.userId = { $in: await ParentsChild.find({ parentId: req.user._id }).distinct('childId') };
   const groupWork = await GroupWork.find(filter)
     .populate('userId', 'username avatar')
     .sort({ created_at: -1 })

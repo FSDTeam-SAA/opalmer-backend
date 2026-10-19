@@ -20,6 +20,15 @@ export interface IQuizResult extends Document {
   progress: IQuizProgress
   score?: number
   percentage?: number
+  startedAt?: Date
+  deadline?: Date
+  submittedAt?: Date
+  gradeStatus?: 'pending_review' | 'reviewed' | 'released'
+  feedback?: string
+  questionSnapshot?: any[]
+  reviewedBy?: Types.ObjectId
+  releasedAt?: Date
+  history?: any[]
   createdAt?: Date
   updatedAt?: Date
 }

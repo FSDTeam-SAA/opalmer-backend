@@ -84,7 +84,7 @@ export const getQuizQAByQuizId = catchAsync(
       statusCode: httpStatus.OK,
       success: true,
       message: 'Quiz questions fetched successfully',
-      data: qa,
+      data: ["student", "parent"].includes(req.user?.type) ? { _id: qa._id, quizId: qa.quizId, questions: qa.questions.map(q => ({ question: q.question, options: q.options, difficulty: q.difficulty, type: q.type, imageUrl: q.imageUrl })) } : qa,
     })
   }
 )
