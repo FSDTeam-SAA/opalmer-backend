@@ -610,7 +610,7 @@ export const getMySchoolAllStudents = catchAsync(
     const students = await User.find({
       schoolId: { $in: schoolIds },
       type: "student",
-    }).select("username Id phoneNumber email gradeLevel age avatar state schoolId");
+    }).select("username Id phoneNumber email gradeLevel age gender avatar state schoolId");
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -638,7 +638,7 @@ export const getMySchoolAllTeachers = catchAsync(
     const teachers = await User.find({
       schoolId: { $in: schoolIds },
       type: "teacher",
-    }).select("username Id phoneNumber email gradeLevel age avatar state schoolId");
+    }).select("username Id phoneNumber email gradeLevel age gender avatar state schoolId");
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -1211,7 +1211,7 @@ export const getSingleStudentAllDetails = catchAsync(
     // 1. Student Basic Info
     // =====================
     const studentData = await User.findById(id).select(
-      "username Id phoneNumber email gradeLevel age avatar state isActive",
+      "username Id phoneNumber email gradeLevel age gender avatar state isActive",
     );
     if (!studentData) {
       throw new AppError(404, "Student not found");
