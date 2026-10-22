@@ -2,6 +2,8 @@ import { forgotPassword, resetPassword } from "../controllers/passwordReset.cont
 import { rateLimit } from "../middlewares/rateLimit.middleware";
 import { resourceAccess } from "../middlewares/resourceAccess.middleware";
 import express from "express";
+import { deleteAdministrator } from "../controllers/administrator.controller";
+import { deleteSchoolUser } from "../controllers/schoolUser.controller";
 import {
   changePassword,
   createAdministrator,
@@ -46,6 +48,8 @@ router.post("/logout", protect, resourceAccess("users"), logoutUser);
 router.post("/change-password", protect, resourceAccess("users"), changePassword);
 
 router.get("/administrators", resourceAccess("users"), getAllAdministrators);
+router.delete("/administrators/:id", protect, authorizeRoles("admin"), resourceAccess("users"), deleteAdministrator);
+router.delete("/school/:type/:id", protect, authorizeRoles("admin", "administrator"), resourceAccess("users"), deleteSchoolUser);
 router.post(
   "/administrators",
   protect,
