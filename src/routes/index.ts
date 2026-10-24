@@ -1,4 +1,6 @@
 import oversightRouter from "./oversight.routes";
+import adminWorkspaceRouter from './adminWorkspace.routes';
+import teacherToolsRouter from './teacherTools.routes';
 import { protect } from "../middlewares/auth.middleware";
 import { Router } from 'express'
 import classRoutes from '../routes/class.routes'
@@ -29,6 +31,8 @@ import callLogRoutes from './callLog.route'
 const router = Router()
 
 const moduleRoutes = [
+  { path: '/admin-workspace', route: adminWorkspaceRouter },
+  { path: '/teacher-tools', route: teacherToolsRouter },
   { path: "/oversight", route: oversightRouter },
   {
     path: '/featuresAndQuestions',

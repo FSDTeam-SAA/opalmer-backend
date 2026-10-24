@@ -8,6 +8,8 @@ import { Room } from '../models/room.model';
 import { Behavior } from '../models/behavior.model';
 import { Attendance } from '../models/attendance.model';
 import { Lesson } from '../models/lesson.model';
+import { Announcement } from '../models/announcement.model';
+import { AdminAnnouncement } from '../models/adminAnnouncement.model';
 import { studentResult } from '../services/assessment.service';
 import { assertClass, assertUser, sameId, visibleStudentIds } from '../services/access.service';
 import { canAccessRoom } from '../utils/chatAccess';
@@ -34,6 +36,8 @@ export const notificationDestination = catchAsync(async (req, res) => {
       data = ['student', 'parent'].includes(req.user!.type) ? studentResult(result) : result;
     }
     kind = 'grade';
+  } else if (kind === 'class') {
+    data = await assertClass(req.user, notification.id);
   } else if (kind === 'quiz') {
     data = await Quiz.findById(notification.id);
     if (data) await assertClass(req.user, data.classId);
@@ -46,6 +50,13 @@ export const notificationDestination = catchAsync(async (req, res) => {
   } else if (kind === 'behavior') {
     data = await Behavior.findById(notification.id);
     if (data) { await assertUser(req.user, data.studentId); if (req.user!.type === 'parent' && data.parentVisible === false) throw new AppError(403, 'This record is private'); }
+  } else if (kind === 'admin_announcement') {
+    // Notification ownership above proves this user was an intended recipient.
+    data = await AdminAnnouncement.findById(notification.id).select('title message audiences createdAt');
+    kind = 'announcement';
+  } else if (kind === 'announcement') {
+    data = await Announcement.findById(notification.id);
+    if (data) await assertClass(req.user, data.classId);
   } else if (kind === 'lesson') {
     data = await Lesson.findById(notification.id);
     if (data) { await assertClass(req.user, data.classId); if (data.studentId) await assertUser(req.user, data.studentId); }

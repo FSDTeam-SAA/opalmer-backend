@@ -133,6 +133,7 @@ test("all asset-bearing schemas have save/update/delete hooks and reference filt
     "lesson.model",
     "academicDocument.model",
     "homework.model",
+    "teacherResource.model",
     "submission.model",
     "message.model",
     "groupWork.model",

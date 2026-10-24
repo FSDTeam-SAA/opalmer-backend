@@ -58,12 +58,16 @@ export const createMessage = catchAsync(async (req: Request, res: Response) => {
 
   emitToRoom(roomId, 'newMessage', newMessage)
   const room = await Room.findById(roomId);
-  await Promise.all((room?.participants ?? []).filter(p => String(p.userId) !== String(authUser._id)).map(p => createNotification({ to: p.userId, type: 'message', id: roomId, message: 'You have a new message.', eventKey: 'message:' + newMessage._id })));
+  let notificationWarning;
+  try {
+    await Promise.all((room?.participants ?? []).filter(p => String(p.userId) !== String(authUser._id)).map(p => createNotification({ to: p.userId, type: 'message', id: roomId, message: 'You have a new message.', eventKey: 'message:' + newMessage._id })));
+  } catch { notificationWarning = 'Message sent, but some notifications could not be delivered.'; }
 
   res.status(httpStatus.CREATED).json({
     success: true,
     message: 'Message created',
     data: newMessage,
+    notificationWarning,
   })
 })
 

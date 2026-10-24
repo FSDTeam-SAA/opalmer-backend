@@ -7,6 +7,7 @@ import handleValidationError from '../errors/handleValidationError';
 import handleCastError from '../errors/handleCastErrror';
 import handleDuplicateError from '../errors/handleDuplicateKeyError';
 import AppError from '../errors/AppError';
+import { MulterError } from 'multer';
 // import { TErrorSources } from '../app/interface/error';
 // import handleZodError from '../app/errors/handleZodError';
 // import handleValidationError from '../app/errors/handleValidationError';
@@ -47,7 +48,15 @@ export const globalErrorHandler: ErrorRequestHandler = (
     },
   ];
 
-  if (err instanceof ZodError) {
+  if (err instanceof MulterError) {
+    statusCode = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    message = err.code === 'LIMIT_FILE_SIZE'
+      ? 'The attachment is too large. Choose a smaller file.'
+      : err.code === 'LIMIT_UNEXPECTED_FILE'
+        ? 'Unexpected attachment field or too many files.'
+        : 'Unable to accept these attachments. Check the number and size of files.';
+    errorSources = [{ path: err.field ?? '', message }];
+  } else if (err instanceof ZodError) {
     const simplifiedError = handleZodError(err);
     ({ statusCode, message, errorSources } = setErrorDetails(simplifiedError));
   } else if (err?.name === 'ValidationError') {

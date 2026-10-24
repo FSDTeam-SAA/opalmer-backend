@@ -4,13 +4,13 @@ import { Router } from "express";
 import gradingController, {
   getSingleStudentGrading,
 } from "../controllers/grading.controller";
-import { authorizeTypes, protect } from "../middlewares/auth.middleware";
+import { authorizeTypes, authorizeTeacherOrAdmin, protect } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 router.get("/results/:resultId", protect, authorizeTypes("teacher"), gradeDetail);
-router.patch("/results/:resultId/review", protect, authorizeTypes("teacher"), reviewGrade);
-router.post("/results/:resultId/release", protect, authorizeTypes("teacher"), releaseGrade);
+router.patch("/results/:resultId/review", protect, authorizeTeacherOrAdmin, reviewGrade);
+router.post("/results/:resultId/release", protect, authorizeTeacherOrAdmin, releaseGrade);
 
 router.post(
   "/sessions",

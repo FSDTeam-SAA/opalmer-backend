@@ -17,6 +17,8 @@ const models = [
   require('../src/models/behavior.model').Behavior,
   require('../src/models/groupWork.model').GroupWork,
   require('../src/models/room.model').Room,
+  require('../src/models/teacherResource.model').TeacherResource,
+  require('../src/models/announcement.model').Announcement,
 ];
 const {GuardianInvitation} = require('../src/models/guardianInvitation.model');
 const id = '507f1f77bcf86cd799439011';

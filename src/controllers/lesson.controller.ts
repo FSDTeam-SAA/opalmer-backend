@@ -35,7 +35,7 @@ const createLesson = catchAsync(async (req, res) => {
     let document = { public_id: "", url: "" };
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path);
-
+      if (!uploadResult) throw new AppError(502, "Lesson attachment upload failed. Please retry.");
       if (uploadResult) {
         document = {
           public_id: uploadResult.public_id,
@@ -94,7 +94,7 @@ const createLesson = catchAsync(async (req, res) => {
       data: result,
     });
   } catch (error) {
-    throw new AppError(500, error as string);
+    throw error;
   }
 });
 

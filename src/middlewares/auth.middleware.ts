@@ -21,6 +21,13 @@ export const authenticate = (purpose: 'access' | '2fa' = 'access'): RequestHandl
 };
 export const protect = authenticate();
 export const protectChallenge = authenticate('2fa');
+export const authorizeTeacherOrAdmin: RequestHandler = (req, _res, next) => {
+  if (!req.user) return next(new AppError(401, 'Authentication required'));
+  if (req.user.role !== 'admin' && !(req.user.role === 'user' && req.user.type === 'teacher')) {
+    return next(new AppError(403, 'Only Admin or teachers can perform this action'));
+  }
+  next();
+};
 export const authorizeRoles = (...roles: string[]): RequestHandler => (req, _res, next) => {
   if (!req.user) return next(new AppError(401, 'Authentication required'));
   if (!roles.includes(req.user.role)) return next(new AppError(403, 'Role access denied'));

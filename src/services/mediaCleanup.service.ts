@@ -11,6 +11,7 @@ export const mediaFields: Record<string, string[]> = {
   Lesson: ["document"],
   AcademicDocument: ["document"],
   Homework: ["file"],
+  TeacherResource: ["file"],
   Submission: ["files"],
   Message: ["file"],
   GroupWork: ["file"],

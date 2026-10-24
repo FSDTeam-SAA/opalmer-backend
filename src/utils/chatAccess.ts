@@ -74,6 +74,9 @@ export const canMessageUser = async (senderId: string, recipientId: string) => {
     return { allowed: false, reason: 'One of the users is inactive' }
   }
 
+  // Admin can contact users in every school; recipients can reply to Admin.
+  if (sender.role === 'admin' || recipient.role === 'admin') return { allowed: true };
+
   // Prevent cross-school messaging when both users belong to a school.
   if (
     sender.schoolId &&

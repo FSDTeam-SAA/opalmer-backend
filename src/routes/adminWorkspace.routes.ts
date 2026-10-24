@@ -1,0 +1,24 @@
+import { Router } from 'express';
+import { authorizeRoles } from '../middlewares/auth.middleware';
+import { gradeDetail, releaseGrade, reviewGrade } from '../controllers/gradeReview.controller';
+import { reviewSubmission } from '../controllers/submission.controller';
+import * as workspace from '../controllers/adminWorkspace.controller';
+
+const router = Router();
+router.get('/directory', authorizeRoles('admin', 'administrator'), workspace.workspaceDirectory);
+router.post('/teacher-behavior', authorizeRoles('administrator'), workspace.submitTeacherBehavior);
+router.use(authorizeRoles('admin'));
+router.get('/teacher-behavior', workspace.listTeacherBehavior);
+router.get('/classes', workspace.workspaceClasses);
+router.get('/classes/:classId/roster', workspace.workspaceRoster);
+router.post('/behavior', workspace.addWorkspaceBehavior);
+router.get('/activity', workspace.workspaceActivity);
+router.get('/submissions/:id', workspace.workspaceSubmission);
+router.patch('/assignments/:id/submissions/:submissionId', reviewSubmission);
+router.get('/results/:resultId', gradeDetail);
+router.patch('/results/:resultId/review', reviewGrade);
+router.post('/results/:resultId/release', releaseGrade);
+router.get('/announcements', workspace.adminAnnouncements);
+router.post('/announcements', workspace.sendAdminAnnouncement);
+router.post('/announcements/:id/retry', workspace.retryAdminAnnouncement);
+export default router;

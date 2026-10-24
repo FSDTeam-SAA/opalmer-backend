@@ -23,6 +23,12 @@ export const resourceAccess = (module: string): RequestHandler => async (req, re
     if (module === 'school' && !write && ['/', '/:id'].includes(path)) return;
     await new Promise<void>((resolve, reject) => protect(req, res, error => error ? reject(error) : resolve()));
     const actor = req.user! as any;
+    const teachingWrite = ['grading', 'quizzes', 'quiz/qa', 'attendances'].includes(module) ||
+      (module === 'homework' && !path.endsWith('/review'));
+    if (write && actor.role === 'admin' && teachingWrite) deny('A teacher account is required for this action');
+    if (write && actor.role === 'administrator' && ['homework', 'grading', 'attendances', 'behavior'].includes(module)) {
+      deny('Only Admin or the class teacher can perform this action');
+    }
     if (['aboutAndTerm', 'featuresAndQuestions'].includes(module)) { if (actor.role !== 'admin') deny(); return; }
     if (module === 'users') {
       if (['/me', '/logout', '/change-password', '/toggle', '/contacts'].includes(path)) return;

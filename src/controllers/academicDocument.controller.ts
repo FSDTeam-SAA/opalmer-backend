@@ -115,7 +115,7 @@ const createAcademicDocument = catchAsync(async (req, res) => {
       data: populatedDocument,
     });
   } catch (error) {
-    throw new AppError(500, error as string);
+    throw error;
   }
 });
 

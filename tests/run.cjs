@@ -7,3 +7,5 @@ require("./chat-dashboard.test.cjs");
 require("./guardian-invitation.test.cjs");
 require("./administrator-delete.test.cjs");
 require("./school-user-delete.test.cjs");
+require("./teacher-tools.test.cjs");
+require("./admin-workspace.test.cjs");

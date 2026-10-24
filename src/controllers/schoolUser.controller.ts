@@ -14,6 +14,8 @@ import { Behavior } from "../models/behavior.model";
 import { GuardianInvitation } from "../models/guardianInvitation.model";
 import { GroupWork } from "../models/groupWork.model";
 import { Room } from "../models/room.model";
+import { TeacherResource } from '../models/teacherResource.model';
+import { Announcement } from '../models/announcement.model';
 import { assertSchool, objectId } from "../services/access.service";
 import { disconnectUser } from "../services/realtime.service";
 import catchAsync from "../utils/catchAsync";
@@ -45,6 +47,8 @@ export const deleteSchoolUser = catchAsync(async (req, res) => {
     Behavior.exists({ $or: [{ teacherId: target._id }, { studentId: target._id }] }),
     GroupWork.exists({ userId: target._id }),
     Room.exists({ $or: [{ "participants.userId": target._id }, { createdBy: target._id }] }),
+    TeacherResource.exists({ $or: [{ teacherId: target._id }, { studentId: target._id }] }),
+    Announcement.exists({ teacherId: target._id }),
   ]);
   if (references.some(Boolean)) throw new AppError(409, "This account has linked class, child, academic or chat records. Resolve those records first, or deactivate the account.");
 
