@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "build": "tsc",
     "create:admin": "ts-node src/scripts/create-admin.ts",
-    "audit:data": "ts-node src/scripts/audit-data.ts"
+    "audit:data": "ts-node src/scripts/audit-data.ts",
+    "seed:beta-students": "ts-node src/scripts/seed-beta-students.ts"
   },
   "keywords": [],
   "author": "",

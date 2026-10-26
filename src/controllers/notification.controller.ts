@@ -3,6 +3,7 @@ import { Notification } from '../models/notification.model'
 import catchAsync from '../utils/catchAsync'
 import httpStatus from 'http-status'
 import AppError from '../errors/AppError'
+import { visibleStudentIds, selectedStudentIds } from '../services/access.service'
 
 /*********************************
  * GET ALL NOTIFICATIONS BY USER *
@@ -11,7 +12,12 @@ export const getUserNotifications = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.params
 
-    const notifications = await Notification.find({ to: userId }).limit(200).sort({
+    const scope = req.user?.type === 'parent'
+      ? (req.query.childId !== undefined
+        ? { studentId: { $in: await selectedStudentIds(req.user, req.query.childId) } }
+        : { $or: [{ studentId: { $in: await visibleStudentIds(req.user) } }, { studentId: null }] })
+      : {};
+    const notifications = await Notification.find({ to: userId, ...scope }).limit(200).sort({
       createdAt: -1,
     })
 

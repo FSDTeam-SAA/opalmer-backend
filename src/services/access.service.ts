@@ -18,6 +18,12 @@ export const assertSchool = (actor: any, schoolId: any) => {
   if (!actor.schoolId || !sameId(actor.schoolId, schoolId)) deny('School access denied');
 };
 export const assertUser = async (actor: any, userId: any, write = false) => {
+  // Check the relationship before looking up a student, so unknown IDs and
+  // unlinked students expose the same response to a parent.
+  if (actor.type === 'parent' && !isAdministrator(actor) && !sameId(actor, userId)) {
+    if (write || !Types.ObjectId.isValid(String(userId)) ||
+        !await ParentsChild.exists({ parentId: actor._id, childId: userId })) deny();
+  }
   const target = await User.findById(objectId(String(userId)));
   if (!target) throw new AppError(404, 'User not found');
   if (actor.role === 'admin' || sameId(actor, target)) return target;
@@ -68,3 +74,14 @@ export const visibleStudentIds = async (actor: any): Promise<any[]> => {
 };
 export const lessonAudience = async (actor: any) => ['student', 'parent'].includes(actor.type)
   ? { $or: [{ studentId: { $in: await visibleStudentIds(actor) } }, { studentId: null }] } : {};
+
+// A selected child must be linked to this parent and enrolled in the requested
+// class. Legacy callers without a selection remain limited to linked children.
+export const selectedStudentIds = async (actor: any, childId?: any, classId?: any): Promise<any[]> => {
+  if (actor.type !== 'parent' || childId === undefined) return visibleStudentIds(actor);
+  if (typeof childId !== 'string') deny();
+  await assertUser(actor, childId);
+  if (sameId(actor, childId)) deny();
+  if (classId && !await StuAssignToClass.exists({ studentId: childId, classId })) deny('Class enrollment required');
+  return [childId];
+};

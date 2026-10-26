@@ -9,8 +9,10 @@ let io: Server | undefined;
 export const initNotificationSocket = (server: Server) => { io = server; };
 type Event = { to: any; message: string; type: string; id: any; studentId?: any; classId?: any; eventKey?: string };
 export const createNotification = async (event: Event) => {
-  const recipient = await User.findById(event.to).select('notificationPreferences state isActive');
+  const recipient = await User.findById(event.to).select('type notificationPreferences state isActive');
   if (!recipient || recipient.isActive === false || recipient.state !== 'active') return null;
+  if (recipient.type === 'parent' && event.studentId &&
+      !await ParentsChild.exists({ parentId: event.to, childId: event.studentId })) return null;
   if (recipient.notificationPreferences?.[event.type] === false) return null;
   const key = event.eventKey ? `${event.eventKey}:${event.to}` : undefined;
   const notification = key

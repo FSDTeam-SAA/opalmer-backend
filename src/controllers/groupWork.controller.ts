@@ -1,4 +1,4 @@
-import { ParentsChild } from "../models/parentsChild.model";
+import { selectedStudentIds } from "../services/access.service";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import mongoose from 'mongoose'
 import httpStatus from 'http-status'
@@ -108,9 +108,10 @@ export const getGroupWorkByClass = catchAsync(async (req, res) => {
   else if (archived === 'false') filter.archived = false
 
   if (req.user?.type === 'student') filter.userId = req.user._id;
-  if (req.user?.type === 'parent') filter.userId = { $in: await ParentsChild.find({ parentId: req.user._id }).distinct('childId') };
+  const parentStudents = req.user?.type === 'parent' ? await selectedStudentIds(req.user, req.query.childId, classId) : null;
+  if (parentStudents) filter.userId = { $in: parentStudents };
   const groupWork = await GroupWork.find(filter)
-    .populate('userId', 'username avatar')
+    .populate({ path: 'userId', select: 'username avatar', ...(req.user?.type === 'parent' ? { match: { _id: { $in: parentStudents } } } : {}) })
     .sort({ created_at: -1 })
 
   sendResponse(res, {

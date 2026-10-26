@@ -8,6 +8,7 @@ import sendResponse from "../utils/sendResponse";
 import httpStatus from "http-status";
 import { buildMetaPagination, getPaginationParams } from "../utils/pagination";
 import { Types } from "mongoose";
+import { selectedStudentIds } from '../services/access.service';
 
 /**************************************
  * CREATE ATTENDANCE FOR ENTIRE CLASS *
@@ -107,6 +108,8 @@ export const getAllAttendance = catchAsync(async (req, res) => {
 
   const attendance = await Attendance.find({
     classId,
+    ...(['parent', 'student'].includes(req.user?.type)
+      ? { userId: { $in: await selectedStudentIds(req.user, req.query.childId, classId) } } : {}),
     date: { $gte: startOfDay, $lte: endOfDay },
   });
 

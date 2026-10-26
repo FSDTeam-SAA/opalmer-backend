@@ -42,7 +42,7 @@ export const inviteGuardian = catchAsync(async (req, res) => {
         <p>Student ID: <strong>${escapeHtml(child.Id)}</strong></p>
         <p>Invitation code:</p>
         <p style="font-size:28px;font-weight:bold;letter-spacing:3px;color:#871dad">${code}</p>
-        <ol><li>Sign in to the parent app using this email address.</li><li>Open Child's Profiles and tap +.</li><li>Enter the Student ID and invitation code, then tap Link child.</li></ol>
+        <ol><li>Sign in to the parent app using this email address.</li><li>Open My Students and tap +.</li><li>Enter the Student ID and invitation code, then tap Link student.</li></ol>
         <p>This code can be used once and expires in 72 hours (${expiresAt.toUTCString()}).</p>
         <p>If you do not recognize this student, contact the school and do not use the code.</p>
       </div>`,

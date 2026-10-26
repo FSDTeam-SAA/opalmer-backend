@@ -17,6 +17,9 @@ import { canAccessRoom } from '../utils/chatAccess';
 export const notificationDestination = catchAsync(async (req, res) => {
   const notification = await Notification.findOne({ _id: req.params.notificationId, to: req.user!._id });
   if (!notification) throw new AppError(404, 'Notification not found');
+  if (req.user?.type === 'parent' && notification.studentId) {
+    await assertUser(req.user, notification.studentId);
+  }
   let data: any, kind = notification.type;
   if (['homework', 'assignment_grade', 'homework_help', 'submission'].includes(kind)) {
     data = await Homework.findById(notification.id);

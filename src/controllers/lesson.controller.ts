@@ -1,4 +1,4 @@
-import { lessonAudience, visibleClassIds } from "../services/access.service";
+import { lessonAudience, visibleClassIds, selectedStudentIds } from "../services/access.service";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
 import { Class } from "../models/class.model";
@@ -317,7 +317,10 @@ const getLessonsByClass = catchAsync(async (req, res) => {
   try {
     const { classId } = req.params;
 
-    const result = await Lesson.find({ classId, ...await lessonAudience(req.user) })
+    const audience = req.user?.type === 'parent'
+      ? { $or: [{ studentId: { $in: await selectedStudentIds(req.user, req.query.childId, classId) } }, { studentId: null }] }
+      : await lessonAudience(req.user);
+    const result = await Lesson.find({ classId, ...audience })
       .populate({
         path: "studentId",
         select: "username email role type",
@@ -338,7 +341,7 @@ const getLessonsByClass = catchAsync(async (req, res) => {
       data: result,
     });
   } catch (error) {
-    throw new AppError(500, error as string);
+    throw error;
   }
 });
 

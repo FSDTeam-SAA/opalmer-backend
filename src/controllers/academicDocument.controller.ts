@@ -4,6 +4,7 @@ import AppError from "../errors/AppError";
 import AcademicDocument from "../models/academicDocument.model";
 import { Class } from "../models/class.model";
 import { ParentsChild } from "../models/parentsChild.model";
+import { selectedStudentIds } from '../services/access.service';
 import { User } from "../models/user.model";
 import { createNotification } from "../sockets/notification.service";
 import catchAsync from "../utils/catchAsync";
@@ -336,7 +337,10 @@ const deleteAcademicDocument = catchAsync(async (req, res) => {
 const getDocumentByClass = catchAsync(async (req, res) => {
   try {
     const { classId } = req.params;
-    const documents = await AcademicDocument.find({ classId })
+    const documents = await AcademicDocument.find({ classId,
+      ...(['parent', 'student'].includes(req.user?.type)
+        ? { studentId: { $in: await selectedStudentIds(req.user, req.query.childId, classId) } } : {}),
+    })
       .populate({
         path: "studentId",
         select: "username Id gradeLevel",

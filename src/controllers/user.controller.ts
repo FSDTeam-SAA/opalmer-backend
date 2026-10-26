@@ -1051,7 +1051,7 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
     `getContacts: Current user ${currentUser.username} (Role: ${currentUser.role}, Type: ${currentUser.type})`,
   );
 
-  if (isCallMode) {
+  if (isCallMode && currentUser.type !== 'parent') {
     const contacts = await User.find(query)
       .select("_id username role type avatar phoneNumber email gradeLevel")
       .limit(50);

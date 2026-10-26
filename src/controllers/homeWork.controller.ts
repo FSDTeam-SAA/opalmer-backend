@@ -1,4 +1,4 @@
-import { assertUser, visibleStudentIds } from "../services/access.service";
+import { assertUser, selectedStudentIds } from "../services/access.service";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import AppError from "../errors/AppError";
@@ -96,7 +96,7 @@ export const getHomeworkByClass = catchAsync(async (req, res) => {
   else if (archived === "false") filter.archived = false;
 
   if (['student', 'parent'].includes(req.user?.type)) filter.status = { $ne: 'draft' };
-  if (req.user?.type === 'parent') filter.$or = [{ studentIds: { $size: 0 } }, { studentIds: { $exists: false } }, { studentIds: { $in: await visibleStudentIds(req.user) } }];
+  if (req.user?.type === 'parent') filter.$or = [{ studentIds: { $size: 0 } }, { studentIds: { $exists: false } }, { studentIds: { $in: await selectedStudentIds(req.user, req.query.childId, classId) } }];
   if (req.user?.type === 'student') filter.$or = [{ studentIds: { $size: 0 } }, { studentIds: { $exists: false } }, { studentIds: req.user._id }];
   const homework = await Homework.find(filter).sort({ created_at: -1 });
   // const homework = await Homework.findByClass(classId)

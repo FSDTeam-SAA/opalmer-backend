@@ -2,7 +2,7 @@ import { StuAssignToClass } from '../models/stuAssignToClass.model';
 import { RequestHandler } from 'express';
 import AppError from '../errors/AppError';
 import { protect } from './auth.middleware';
-import { assertClass, assertSchool, assertUser, deny, isAdministrator, sameId, visibleStudentIds } from '../services/access.service';
+import { assertClass, assertSchool, assertUser, deny, isAdministrator, sameId, visibleStudentIds, selectedStudentIds } from '../services/access.service';
 import { Quiz } from '../models/quiz.model';
 import { Homework } from '../models/homework.model';
 import { Lesson } from '../models/lesson.model';
@@ -47,6 +47,9 @@ export const resourceAccess = (module: string): RequestHandler => async (req, re
       return;
     }
     if (module === 'dashboard') { if (!isAdministrator(actor)) deny(); return; }
+    if (actor.type === 'parent' && req.query.childId !== undefined) {
+      await selectedStudentIds(actor, req.query.childId, req.params.classId ?? req.query.classId);
+    }
     if (['message', 'rooms', 'call-logs', 'parent/child'].includes(module)) return;
     if (module === 'grading') {
       if (req.query.classId) await assertClass(actor, req.query.classId);

@@ -42,7 +42,7 @@ test('invitation is emailed to the selected parent with student ID, single-use c
     assert.equal(calls.record.parentEmail, calls.mail.to);
     assert.match(calls.mail.html, /student-1/);
     assert.match(calls.mail.html, /Child &lt;example&gt;/);
-    assert.match(calls.mail.html, /Link child/);
+    assert.match(calls.mail.html, /Link student/);
     assert.match(calls.mail.html, /72 hours/);
     const { code, expiresAt } = calls.response.data;
     assert.match(code, /^[A-F0-9]{12}$/);

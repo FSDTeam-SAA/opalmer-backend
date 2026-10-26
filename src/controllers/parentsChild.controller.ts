@@ -1,3 +1,4 @@
+import { activeAccount } from '../services/access.service';
 import crypto from "node:crypto";
 import { GuardianInvitation } from "../models/guardianInvitation.model";
 import { Request, Response } from 'express'
@@ -19,6 +20,9 @@ export const createParentsChild = catchAsync(
     const authUser = req.user as any
     const parentId = authUser?._id?.toString()
     let { childId } = req.body
+    const denied = () => new AppError(403, 'Unable to link student. Check your student ID and school invitation.');
+    if (typeof childId !== 'string' || typeof req.body.invitationCode !== 'string' ||
+        !req.body.invitationCode.trim() || !authUser?.email) throw denied();
 
     if (!parentId || !childId) {
       throw new AppError(400, 'childId is required.')
@@ -28,22 +32,22 @@ export const createParentsChild = catchAsync(
     if (!mongoose.Types.ObjectId.isValid(childId)) {
       const student = await User.findOne({ Id: childId })
       if (!student) {
-        throw new AppError(404, 'Student with the provided ID not found.')
+        throw denied()
       }
       childId = student._id
     }
 
-    const parent = await User.findById(parentId).select('_id type isActive schoolId')
-    if (!parent || parent.type !== 'parent' || !parent.isActive) {
+    const parent = await User.findById(parentId).select('_id type isActive state schoolId')
+    if (!parent || parent.type !== 'parent' || !activeAccount(parent)) {
       throw new AppError(
         httpStatus.FORBIDDEN,
         'Only active parent accounts can create parent-child relations'
       )
     }
 
-    const childUser = await User.findById(childId).select('_id type isActive schoolId')
-    if (!childUser || childUser.type !== 'student' || !childUser.isActive) {
-      throw new AppError(400, 'Child must be an active student account')
+    const childUser = await User.findById(childId).select('_id type isActive state schoolId')
+    if (!childUser || childUser.type !== 'student' || !activeAccount(childUser)) {
+      throw denied()
     }
 
     if (
@@ -51,10 +55,7 @@ export const createParentsChild = catchAsync(
       childUser.schoolId &&
       parent.schoolId.toString() !== childUser.schoolId.toString()
     ) {
-      throw new AppError(
-        httpStatus.FORBIDDEN,
-        'Parent and child must belong to the same school'
-      )
+      throw denied()
     }
 
     // Prevent duplicate relation
@@ -64,8 +65,8 @@ export const createParentsChild = catchAsync(
     }
 
     const codeHash = crypto.createHash('sha256').update(String(req.body.invitationCode ?? '').trim().toUpperCase()).digest('hex');
-    const invitation = await GuardianInvitation.findOneAndUpdate({ childId, codeHash, parentEmail: String(authUser.email ?? '').toLowerCase(), expiresAt: { $gt: new Date() }, usedAt: { $exists: false } }, { $set: { usedAt: new Date(), usedBy: parentId } }, { new: true });
-    if (!invitation) throw new AppError(403, 'A valid school invitation for your email is required to link this student');
+    const invitation = await GuardianInvitation.findOneAndUpdate({ childId, codeHash, parentEmail: String(authUser.email ?? '').trim().toLowerCase(), expiresAt: { $gt: new Date() }, usedAt: { $exists: false } }, { $set: { usedAt: new Date(), usedBy: parentId } }, { new: true });
+    if (!invitation) throw denied();
     const relation = await ParentsChild.findOneAndUpdate({ parentId, childId }, { $setOnInsert: { parentId, childId } }, { new: true, upsert: true })
 
     sendResponse(res, {
