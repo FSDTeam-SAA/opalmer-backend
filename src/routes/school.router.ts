@@ -3,8 +3,11 @@ import { Router } from "express";
 import schoolController from "../controllers/school.controller";
 import { authorizeRoles, protect } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
+import { schoolDataImport, listDistricts } from '../controllers/schoolImport.controller';
 
 const router = Router();
+router.post('/import', protect, authorizeRoles('admin'), schoolDataImport);
+router.get('/districts', protect, authorizeRoles('admin', 'administrator'), listDistricts);
 
 router.post(
   "/create",

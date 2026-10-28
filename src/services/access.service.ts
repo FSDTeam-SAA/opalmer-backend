@@ -18,6 +18,8 @@ export const assertSchool = (actor: any, schoolId: any) => {
   if (!actor.schoolId || !sameId(actor.schoolId, schoolId)) deny('School access denied');
 };
 export const assertUser = async (actor: any, userId: any, write = false) => {
+  // Students must not probe other accounts, including whether an ID exists.
+  if (actor.type === 'student' && !isAdministrator(actor) && !sameId(actor, userId)) deny();
   // Check the relationship before looking up a student, so unknown IDs and
   // unlinked students expose the same response to a parent.
   if (actor.type === 'parent' && !isAdministrator(actor) && !sameId(actor, userId)) {

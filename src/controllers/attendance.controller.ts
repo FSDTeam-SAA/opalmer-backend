@@ -241,12 +241,18 @@ export const getClassAttendanceStats = catchAsync(async (req, res) => {
   const classInfo = await Class.findById(classId);
   if (!classInfo) throw new AppError(404, "Class not found");
 
-  // 2. Get total students in that grade
-  const studentCount = await StuAssignToClass.countDocuments({ classId });
+  // Personal accounts receive statistics only for their own visible students.
+  const personal = ['parent', 'student'].includes(req.user?.type);
+  const students = personal ? await selectedStudentIds(req.user, req.query.childId, classId) : [];
+  const attendanceScope = personal ? { userId: { $in: students } } : {};
+  const studentCount = await StuAssignToClass.countDocuments({ classId,
+    ...(personal ? { studentId: { $in: students } } : {}),
+  });
 
   // 3. Get unique dates where attendance was taken for this class in last 30 days
   const uniqueDates = await Attendance.distinct("date", {
     classId: new Types.ObjectId(classId),
+    ...attendanceScope,
     date: { $gte: thirtyDaysAgo },
   });
   const totalDays = uniqueDates.length;
@@ -254,6 +260,7 @@ export const getClassAttendanceStats = catchAsync(async (req, res) => {
   // 3. Get total present count
   const presentCount = await Attendance.countDocuments({
     classId: new Types.ObjectId(classId),
+    ...attendanceScope,
     date: { $gte: thirtyDaysAgo },
     status: { $regex: /^present$/i },
   });

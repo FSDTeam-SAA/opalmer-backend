@@ -1,3 +1,5 @@
+import { District } from '../models/district.model';
+import { Types } from 'mongoose';
 import AppError from "../errors/AppError";
 import school from "../models/school.model";
 import { User } from "../models/user.model";
@@ -18,6 +20,12 @@ const createSchool = catchAsync(async (req, res) => {
   }
 
   const payload = { ...req.body };
+    if (payload.districtId !== undefined) {
+      if (payload.districtId === '') payload.districtId = null;
+      else if (typeof payload.districtId !== 'string' || !Types.ObjectId.isValid(payload.districtId) || !await District.exists({ _id: payload.districtId })) {
+        throw new AppError(400, 'Choose a valid district');
+      }
+    }
 
   if (req.file) {
     const uploadResult = await uploadToCloudinary(req.file.path);
@@ -58,6 +66,7 @@ const getAllSchools = catchAsync(async (req, res) => {
     // Fetch with filter, pagination & populate
     const result = await school
       .find(filter)
+      .populate("districtId", "name code")
       .populate({
         path: "administrator",
         select: "username Id role type",
@@ -79,6 +88,7 @@ const getAllSchools = catchAsync(async (req, res) => {
       },
     });
   } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError(500, error as string);
   }
 });
@@ -94,6 +104,7 @@ const getMySchool = catchAsync(async (req, res) => {
     .findOne({
       $or: [{ _id: user.schoolId }, { administrator: user._id }],
     })
+    .populate("districtId", "name code")
     .populate({
       path: "administrator",
       select: "username Id role type",
@@ -113,7 +124,7 @@ const getMySchool = catchAsync(async (req, res) => {
 const getSingleSchool = catchAsync(async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await school.findById(id);
+    const result = await school.findById(id).populate("districtId", "name code");
     if (!result) {
       throw new AppError(404, "School not found");
     }
@@ -124,6 +135,7 @@ const getSingleSchool = catchAsync(async (req, res) => {
       data: result,
     });
   } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError(500, error as string);
   }
 });
@@ -133,6 +145,12 @@ const updateSchool = catchAsync(async (req, res) => {
     const { id } = req.params;
 
     const payload = { ...req.body };
+    if (payload.districtId !== undefined) {
+      if (payload.districtId === '') payload.districtId = null;
+      else if (typeof payload.districtId !== 'string' || !Types.ObjectId.isValid(payload.districtId) || !await District.exists({ _id: payload.districtId })) {
+        throw new AppError(400, 'Choose a valid district');
+      }
+    }
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path);
@@ -156,6 +174,7 @@ const updateSchool = catchAsync(async (req, res) => {
       data: result,
     });
   } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError(500, error as string);
   }
 });
