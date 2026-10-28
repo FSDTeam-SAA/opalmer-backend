@@ -10,3 +10,5 @@ require("./administrator-delete.test.cjs");
 require("./school-user-delete.test.cjs");
 require("./teacher-tools.test.cjs");
 require("./admin-workspace.test.cjs");
+require("./school-import.test.cjs");
+require("./role-access.test.cjs");

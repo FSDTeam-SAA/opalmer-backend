@@ -1,5 +1,6 @@
 export interface ISchool {
   name: string;
+  districtId?: string;
   administrator?: string;
   code?: string;
   address?: string;

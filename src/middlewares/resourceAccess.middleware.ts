@@ -47,8 +47,9 @@ export const resourceAccess = (module: string): RequestHandler => async (req, re
       return;
     }
     if (module === 'dashboard') { if (!isAdministrator(actor)) deny(); return; }
-    if (actor.type === 'parent' && req.query.childId !== undefined) {
-      await selectedStudentIds(actor, req.query.childId, req.params.classId ?? req.query.classId);
+    const requestedChild = req.query.childId ?? req.query.childsid ?? req.query.childsId ?? req.query.studentId;
+    if (actor.type === 'parent' && requestedChild !== undefined) {
+      await selectedStudentIds(actor, requestedChild, req.params.classId ?? req.query.classId);
     }
     if (['message', 'rooms', 'call-logs', 'parent/child'].includes(module)) return;
     if (module === 'grading') {
