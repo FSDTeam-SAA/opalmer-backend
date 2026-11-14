@@ -5,10 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "node tests/run.cjs",
-    "dev": "node init && ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "lint": "eslint . --ext .ts",
-    "start": "node init && node dist/server.js",
-    "build": "node init && tsc",
+    "start": "node dist/server.js",
+    "build": "tsc",
     "create:admin": "ts-node src/scripts/create-admin.ts",
     "audit:data": "ts-node src/scripts/audit-data.ts",
     "seed:beta-students": "ts-node src/scripts/seed-beta-students.ts"
