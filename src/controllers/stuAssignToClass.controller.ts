@@ -81,8 +81,8 @@ export const assignStudentToClass = catchAsync(async (req, res) => {
 
   await createNotification({
     to: new mongoose.Types.ObjectId(studentId as any),
-    message: `You have been assigned to a class: ${classId}`,
-    type: "user",
+    message: `You have been assigned to Grade ${classInfo.grade} ${classInfo.get('subject') || 'class'}`,
+    type: "class",
     id: newAssignment._id,
   });
 

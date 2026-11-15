@@ -5,7 +5,11 @@ import express from "express";
 import { globalErrorHandler } from "./middlewares/globalErrorHandler";
 import { notFound } from "./middlewares/notFound";
 import router from "./routes";
+import config from "./config/config";
+import { fileDeliveryReplacer } from "./utils/mediaDelivery";
+import { signFileDownload } from "./utils/cloudinary";
 const app = express();
+app.set("json replacer", fileDeliveryReplacer(config.cloudinary.cloudName, signFileDownload));
 
 // When credentials are required, browsers reject wildcard origins (`*`).
 // Reflect the request origin instead so credentials can be used safely.

@@ -8,6 +8,7 @@ import { Room } from '../models/room.model';
 import { Behavior } from '../models/behavior.model';
 import { Attendance } from '../models/attendance.model';
 import { Lesson } from '../models/lesson.model';
+import AcademicDocument from '../models/academicDocument.model';
 import { Announcement } from '../models/announcement.model';
 import { AdminAnnouncement } from '../models/adminAnnouncement.model';
 import { studentResult } from '../services/assessment.service';
@@ -47,6 +48,12 @@ export const notificationDestination = catchAsync(async (req, res) => {
   } else if (kind === 'message') {
     await canAccessRoom(String(req.user!._id), String(notification.id));
     data = await Room.findById(notification.id).populate('participants.userId', 'username Id avatar type');
+  } else if (kind === 'academicDocument' || kind === 'academic_document') {
+    data = await AcademicDocument.findById(notification.id);
+    if (data) {
+      await assertUser(req.user, data.studentId);
+      if (data.classId) await assertClass(req.user, data.classId);
+    }
   } else if (kind === 'attendance') {
     data = await Attendance.findById(notification.id);
     if (data) await assertUser(req.user, data.userId);

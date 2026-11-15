@@ -12,6 +12,13 @@ import sendResponse from '../utils/sendResponse'
 import httpStatus from 'http-status'
 import { canMessageUser } from '../utils/chatAccess'
 
+export const childProgress = (results: { percentage?: unknown }[]) => {
+  const percentages = results.map(result => result.percentage).filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+  if (!percentages.length) return { progress: null, tagText: 'Awaiting grades' };
+  const progress = Number((percentages.reduce((sum, value) => sum + value, 0) / percentages.length / 100).toFixed(2));
+  return { progress, tagText: progress >= 0.9 ? 'Excellent' : progress >= 0.75 ? 'Good' : progress >= 0.5 ? 'Fair' : 'Needs Work' };
+};
+
 /*****************
  * CREATE RELATION
  *****************/
@@ -140,31 +147,12 @@ export const getChildrenByParentId = catchAsync(
             'progress.status': 'completed', gradeStatus: 'released'
           });
 
-          let averagePercentage = 0;
-          let progressScore = 0;
-
-          if (quizResults.length > 0) {
-            const totalPercentage = quizResults.reduce((acc: number, curr: any) => acc + (curr.percentage || 0), 0);
-            averagePercentage = totalPercentage / quizResults.length;
-            progressScore = Number((averagePercentage / 100).toFixed(2));
-          }
-
-          let tagTextString = 'Needs Work';
-          if (progressScore >= 0.9) {
-            tagTextString = 'Excellent';
-          } else if (progressScore >= 0.75) {
-            tagTextString = 'Good';
-          } else if (progressScore >= 0.5) {
-            tagTextString = 'Fair';
-          }
-
           const relationObj = relation.toObject();
           return {
             ...relationObj,
             childId: {
               ...relationObj.childId,
-              progress: progressScore,
-              tagText: tagTextString
+              ...childProgress(quizResults)
             }
           };
         }

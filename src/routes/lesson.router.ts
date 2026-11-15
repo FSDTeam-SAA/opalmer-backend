@@ -48,14 +48,14 @@ router.get(
   "/:lessonId",
   protect,
   // authorizeTypes("student"),
-  authorizeTypes("teacher"),
+  authorizeTypes("teacher", "student", "parent"),
   resourceAccess("lessons"), lessonController.getSingleLesson
 );
 
 router.get(
   "/class/:classId",
   protect,
-  authorizeTypes("teacher", "parent"),
+  authorizeTypes("teacher", "parent", "student"),
   resourceAccess("lessons"), lessonController.getLessonsByClass
 )
 

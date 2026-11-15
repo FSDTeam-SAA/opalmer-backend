@@ -5,8 +5,8 @@ import { Message } from '../models/message.model'
 import catchAsync from '../utils/catchAsync'
 import AppError from '../errors/AppError'
 import mongoose from 'mongoose'
-import { emitToRoom } from '../services/realtime.service'
-import { uploadToCloudinary } from '../utils/cloudinary' // Adjust path
+import { emitToRoom, emitToRoomMembers } from '../services/realtime.service'
+import { deliverFiles, uploadToCloudinary } from '../utils/cloudinary'
 import { canAccessRoom } from '../utils/chatAccess'
 import { Room } from '../models/room.model'
 
@@ -26,12 +26,25 @@ export const createMessage = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Invalid room ID')
   }
 
-  await canAccessRoom(authUser._id.toString(), roomId)
+  const accessibleRoom = await canAccessRoom(authUser._id.toString(), roomId)
+  if (accessibleRoom.isBlocked || accessibleRoom.blockedBy?.length) {
+    throw new AppError(httpStatus.FORBIDDEN, 'Messaging is blocked in this conversation')
+  }
+  if (message !== undefined && typeof message !== 'string') {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Message must be text')
+  }
+  if (!message?.trim() && !files.length) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Add a message or an attachment')
+  }
+  if (message?.length > 5000) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Message cannot exceed 5000 characters')
+  }
 
   // Upload all files to Cloudinary
   const fileData = await Promise.all(
     files.map(async (file) => {
       const result = await uploadToCloudinary(file.path)
+      if (!result) throw new AppError(502, 'Attachment upload failed. Please try again.')
       if (result) {
         return {
           filename: file.originalname,
@@ -44,7 +57,7 @@ export const createMessage = catchAsync(async (req: Request, res: Response) => {
   )
 
   const newMessage = await Message.create({
-    message,
+    message: message?.trim(),
     roomId,
     userId: authUser._id,
     file: fileData.filter(Boolean), // remove nulls
@@ -52,11 +65,12 @@ export const createMessage = catchAsync(async (req: Request, res: Response) => {
 
   await Room.findByIdAndUpdate(roomId, {
     lastMessageId: newMessage._id,
-    lastMessage: message || (fileData.length > 0 ? 'Attachment' : ''),
+    lastMessage: message?.trim() || (fileData.length > 0 ? 'Attachment' : ''),
     lastMessageAt: new Date()
   })
 
-  emitToRoom(roomId, 'newMessage', newMessage)
+  const deliveredMessage = deliverFiles(newMessage)
+  emitToRoomMembers(roomId, accessibleRoom.participants.map(participant => String(participant.userId)), 'newMessage', deliveredMessage)
   const room = await Room.findById(roomId);
   let notificationWarning;
   try {
@@ -66,7 +80,7 @@ export const createMessage = catchAsync(async (req: Request, res: Response) => {
   res.status(httpStatus.CREATED).json({
     success: true,
     message: 'Message created',
-    data: newMessage,
+    data: deliveredMessage,
     notificationWarning,
   })
 })
@@ -101,7 +115,7 @@ export const getMessagesByRoom = catchAsync(
     res.status(httpStatus.OK).json({
       success: true,
       message: 'Messages fetched',
-      data: messages,
+      data: deliverFiles(messages),
       meta: {
         page,
         limit,
@@ -145,7 +159,7 @@ export const updateMessage = catchAsync(async (req: Request, res: Response) => {
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Message updated',
-    data: updated,
+    data: deliverFiles(updated),
   })
 })
 

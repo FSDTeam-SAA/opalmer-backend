@@ -4,6 +4,7 @@ import mongoose, { PipelineStage, Types } from "mongoose";
 import AppError from "../errors/AppError";
 import { Class } from "../models/class.model";
 import { Quiz } from "../models/quiz.model";
+import { QuizResult } from "../models/quizResult.model";
 import { StuAssignToClass } from "../models/stuAssignToClass.model";
 import { User } from "../models/user.model";
 import { createNotification } from "../sockets/notification.service";
@@ -344,10 +345,14 @@ export const getQuizzesForStudent = catchAsync(
       { $project: { qa: 0 } },
     ]);
 
+    const attempts = await QuizResult.find({ studentId, quizId: { $in: quizzes.map((quiz: any) => quiz._id) } })
+      .select("quizId progress.status").lean();
+    const attemptStatus = new Map(attempts.map(attempt => [String(attempt.quizId), attempt.progress?.status]));
     const data = quizzes.map((quiz: any) => {
       const classData = classById.get(quiz.classId.toString());
       return {
         ...quiz,
+        resultStatus: attemptStatus.get(String(quiz._id)) ?? "not_started",
         class: classData
           ? {
               _id: classData._id,

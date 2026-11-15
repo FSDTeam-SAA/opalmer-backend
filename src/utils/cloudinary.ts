@@ -2,12 +2,21 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import config from "../config/config";
 import { recordUploadedAsset } from '../services/uploadContext.service';
+import { withFileDelivery } from './mediaDelivery';
 
 cloudinary.config({
   cloud_name: config.cloudinary.cloudName,
   api_key: config.cloudinary.apiKey,
   api_secret: config.cloudinary.apiSecret,
 });
+
+export const signFileDownload = (publicId: string) =>
+  cloudinary.utils.private_download_url(publicId, "", {
+    resource_type: "raw", type: "upload", expires_at: Math.floor(Date.now() / 1000) + 3600,
+  });
+
+export const deliverFiles = <T>(value: T): T =>
+  withFileDelivery(value, config.cloudinary.cloudName, signFileDownload);
 
 export const uploadToCloudinary = async (localFilePath: string) => {
   try {

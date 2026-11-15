@@ -114,6 +114,11 @@ export const setupWebRTCSocket = (io: Server) => {
     console.log('WebRTC Connected:', socket.id, authUserId)
 
     let currentRoom: string | null = null
+    const assertCallTarget = (room: Awaited<ReturnType<typeof canAccessRoom>>, targetId: string) => {
+      if (targetId === authUserId || !room.participants.some(participant => String(participant.userId) === targetId)) {
+        throw new Error('Invalid call recipient')
+      }
+    }
 
     socket.on(
       'join',
@@ -172,6 +177,7 @@ export const setupWebRTCSocket = (io: Server) => {
           }
 
           const room = await canAccessRoom(authUserId, payload.roomId)
+          if (room.isBlocked || room.blockedBy?.length) throw new Error('Calling is blocked in this conversation')
           const isDirectRoom =
             room.type === 'direct' && room.participants.length === 2
 
@@ -219,7 +225,8 @@ export const setupWebRTCSocket = (io: Server) => {
         callback?: (res: Record<string, unknown>) => void,
       ) => {
         try {
-          await canAccessRoom(authUserId, payload.roomId)
+          const room = await canAccessRoom(authUserId, payload.roomId)
+          assertCallTarget(room, payload.callerId)
           emitToUser(io, payload.callerId, 'call-accepted', {
             roomId: payload.roomId,
             callLogId: payload.callLogId || null,
@@ -250,7 +257,8 @@ export const setupWebRTCSocket = (io: Server) => {
         callback?: (res: Record<string, unknown>) => void,
       ) => {
         try {
-          await canAccessRoom(authUserId, payload.roomId)
+          const room = await canAccessRoom(authUserId, payload.roomId)
+          assertCallTarget(room, payload.callerId)
           emitToUser(io, payload.callerId, 'call-declined', {
             roomId: payload.roomId,
             callLogId: payload.callLogId || null,
@@ -281,7 +289,8 @@ export const setupWebRTCSocket = (io: Server) => {
         callback?: (res: Record<string, unknown>) => void,
       ) => {
         try {
-          await canAccessRoom(authUserId, payload.roomId)
+          const room = await canAccessRoom(authUserId, payload.roomId)
+          if (payload.targetUserId) assertCallTarget(room, payload.targetUserId)
 
           const endPayload = {
             roomId: payload.roomId,
@@ -318,9 +327,10 @@ export const setupWebRTCSocket = (io: Server) => {
         callerId: string
         signal: unknown
       }) => {
+        if (!currentRoom || !rooms[currentRoom]?.includes(payload.userToSignal) || payload.userToSignal === socket.id) return
         io.to(payload.userToSignal).emit('user-signal', {
           signal: payload.signal,
-          callerId: payload.callerId,
+          callerId: socket.id,
         })
       },
     )
@@ -328,6 +338,7 @@ export const setupWebRTCSocket = (io: Server) => {
     socket.on(
       'returning-signal',
       (payload: { callerId: string; signal: unknown }) => {
+        if (!currentRoom || !rooms[currentRoom]?.includes(payload.callerId) || payload.callerId === socket.id) return
         io.to(payload.callerId).emit('receiving-returned-signal', {
           signal: payload.signal,
           id: socket.id,

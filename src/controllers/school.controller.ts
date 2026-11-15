@@ -1,5 +1,4 @@
-import { District } from '../models/district.model';
-import { Types } from 'mongoose';
+import { resolveSchoolDistrict } from '../services/schoolDistrict.service';
 import AppError from "../errors/AppError";
 import school from "../models/school.model";
 import { User } from "../models/user.model";
@@ -20,12 +19,7 @@ const createSchool = catchAsync(async (req, res) => {
   }
 
   const payload = { ...req.body };
-    if (payload.districtId !== undefined) {
-      if (payload.districtId === '') payload.districtId = null;
-      else if (typeof payload.districtId !== 'string' || !Types.ObjectId.isValid(payload.districtId) || !await District.exists({ _id: payload.districtId })) {
-        throw new AppError(400, 'Choose a valid district');
-      }
-    }
+  await resolveSchoolDistrict(payload);
 
   if (req.file) {
     const uploadResult = await uploadToCloudinary(req.file.path);
@@ -145,12 +139,7 @@ const updateSchool = catchAsync(async (req, res) => {
     const { id } = req.params;
 
     const payload = { ...req.body };
-    if (payload.districtId !== undefined) {
-      if (payload.districtId === '') payload.districtId = null;
-      else if (typeof payload.districtId !== 'string' || !Types.ObjectId.isValid(payload.districtId) || !await District.exists({ _id: payload.districtId })) {
-        throw new AppError(400, 'Choose a valid district');
-      }
-    }
+    await resolveSchoolDistrict(payload);
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path);

@@ -1026,6 +1026,41 @@ export const getContacts = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
+  // Dashboard directory: search before paginating so contacts beyond the first
+  // page remain discoverable. School administrators retain their school scope.
+  if (['admin', 'administrator'].includes(currentUser.role) && req.query.mode !== 'call') {
+    if (currentUser.role === 'administrator' && !currentUser.schoolId) {
+      throw new AppError(httpStatus.FORBIDDEN, 'A school is required to find contacts');
+    }
+    const role = typeof req.query.role === 'string' ? req.query.role : '';
+    if (role && !['parent', 'student', 'teacher', 'administrator'].includes(role)) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'Invalid contact role');
+    }
+    const search = typeof req.query.search === 'string' ? req.query.search.trim().slice(0, 100) : '';
+    const page = Math.max(1, Math.floor(Number(req.query.page) || 1));
+    const limit = Math.min(50, Math.max(1, Math.floor(Number(req.query.limit) || 30)));
+    const filters: any[] = [
+      { _id: { $ne: currentUser._id }, isActive: true, state: 'active' },
+      { $or: [{ role: 'administrator' }, { role: 'user', type: { $in: ['parent', 'student', 'teacher'] } }] },
+    ];
+    if (currentUser.role === 'administrator') filters.push({ schoolId: currentUser.schoolId });
+    if (role) filters.push(role === 'administrator' ? { role } : { role: 'user', type: role });
+    if (search) {
+      const pattern = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filters.push({ $or: ['username', 'Id', 'email'].map(field => ({ [field]: { $regex: pattern, $options: 'i' } })) });
+    }
+    const query = { $and: filters };
+    const [contacts, total] = await Promise.all([
+      User.find(query).select('username Id role type avatar email schoolId').sort({ username: 1, _id: 1 }).skip((page - 1) * limit).limit(limit),
+      User.countDocuments(query),
+    ]);
+    return res.status(httpStatus.OK).json({
+      success: true,
+      data: contacts.map(c => ({ id: c._id, username: c.username, Id: c.Id, role: c.role, type: c.type, avatar: c.avatar?.url || '', email: c.email })),
+      meta: { page, total, totalPages: Math.ceil(total / limit) },
+    });
+  }
+
   let query: any = {
     _id: { $ne: currentUser._id },
     isActive: true,

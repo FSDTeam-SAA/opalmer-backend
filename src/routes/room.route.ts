@@ -4,11 +4,13 @@ import {
   createRoom,
   editRoom,
   getRoomsByUserId,
+  setRoomBlock,
 } from '../controllers/room.controller'
 import { upload } from '../middlewares/multer.middleware'
 import { authorizeTypes, protect } from '../middlewares/auth.middleware'
 
 const router = express.Router()
+router.patch('/:id/block', protect, resourceAccess('rooms'), setRoomBlock)
 
 router.post('/', protect, upload.single('avatar'), resourceAccess("rooms"), createRoom)
 router.patch(

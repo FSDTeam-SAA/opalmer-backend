@@ -42,6 +42,15 @@ const parseParticipants = (participants: unknown): string[] => {
   return ids
 }
 
+export const setRoomBlock = catchAsync(async (req: Request, res: Response) => {
+  const userId = String(req.user!._id)
+  const room = await canAccessRoom(userId, req.params.id)
+  if (room.type !== 'direct') throw new AppError(400, 'Blocking is available for direct conversations')
+  if (typeof req.body.blocked !== 'boolean') throw new AppError(400, 'Choose whether to block the conversation')
+  const updated = await Room.findByIdAndUpdate(room._id, req.body.blocked ? { $addToSet: { blockedBy: req.user!._id } } : { $pull: { blockedBy: req.user!._id } }, { new: true })
+  res.json({ success: true, data: updated })
+})
+
 /*****************************************************************************
  *                               CREATE A ROOM                               *
  * * FOR 1-TO-1 ROOMS, ENSURE NO DUPLICATE ROOM EXISTS BETWEEN THE TWO USERS *
@@ -97,7 +106,13 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(400, 'Cannot create room with inactive users')
   }
 
-  const isDirectRoom = normalizedParticipantIds.length === 2
+  if (req.body.type !== undefined && !['direct', 'group'].includes(req.body.type)) {
+    throw new AppError(400, 'Invalid room type')
+  }
+  if (req.body.type === 'direct' && normalizedParticipantIds.length !== 2) {
+    throw new AppError(400, 'Direct rooms must have two participants')
+  }
+  const isDirectRoom = req.body.type !== 'group' && normalizedParticipantIds.length === 2
 
   if (isDirectRoom) {
     {
@@ -184,7 +199,7 @@ export const createRoom = catchAsync(async (req: Request, res: Response) => {
 
   const populatedRoom = await Room.findById(room._id).populate(
     'participants.userId',
-    'username avatar type',
+    'username avatar type role',
   )
 
   res.status(201).json({
@@ -207,6 +222,11 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
   }
 
   const room = await canAccessRoom(authUser._id.toString(), roomId)
+
+  if ((updates.participants !== undefined || updates.name !== undefined || req.file || updates.removeAvatar) &&
+      (room.type !== 'group' || String(room.createdBy) !== String(authUser._id))) {
+    throw new AppError(403, 'Only the group creator can change group details or members')
+  }
 
   // If new avatar uploaded, upload to Cloudinary and update
   if (req.file) {
@@ -232,6 +252,8 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
     const normalizedParticipantIds = [
       ...new Set(parsedParticipants.map((id) => id.toString())),
     ]
+
+    if (normalizedParticipantIds.length < 2) throw new AppError(400, 'A group must contain at least two participants')
 
     const invalidParticipant = normalizedParticipantIds.find(
       (id) => !mongoose.Types.ObjectId.isValid(id),
@@ -263,6 +285,12 @@ export const editRoom = catchAsync(async (req: Request, res: Response) => {
 
     if (participantUsers.some((u) => !u.isActive)) {
       throw new AppError(400, 'Cannot update room with inactive users')
+    }
+
+    for (const participantId of normalizedParticipantIds) {
+      if (participantId === String(authUser._id)) continue
+      const access = await canMessageUser(String(authUser._id), participantId)
+      if (!access.allowed) throw new AppError(403, access.reason || 'Participant access denied')
     }
 
     room.participants = normalizedParticipantIds.map((id) => ({
@@ -300,7 +328,7 @@ export const getRoomsByUserId = catchAsync(
     const rooms = await Room.find({
       'participants.userId': authUser._id,
     })
-      .populate('participants.userId', 'username avatar type')
+      .populate('participants.userId', 'username avatar type role')
       .populate('lastMessageId')
       .sort({ updated_at: -1 })
 

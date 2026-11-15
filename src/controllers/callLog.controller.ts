@@ -21,13 +21,20 @@ export const createCallLog = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated')
   }
 
-  await canAccessRoom(authUser._id.toString(), roomId)
+  const room = await canAccessRoom(authUser._id.toString(), roomId)
+  if (room.type !== 'direct') throw new AppError(400, 'Only direct rooms support calling right now')
+  if (room.isBlocked || room.blockedBy?.length) throw new AppError(403, 'Calling is blocked in this conversation')
+  if (!receiverId || String(receiverId) === String(authUser._id) ||
+      !room.participants.some(participant => String(participant.userId) === String(receiverId))) {
+    throw new AppError(403, 'Receiver must be the other participant in this conversation')
+  }
+  if (callType && callType !== 'audio') throw new AppError(400, 'Audio calls only are supported')
 
   const callLog = await CallLog.create({
     roomId,
     callerId: authUser._id,
     receiverId,
-    callType: callType || 'video',
+    callType: 'audio',
     status: 'ongoing',
     startedAt: new Date()
   })
@@ -53,6 +60,7 @@ export const answerCallLog = catchAsync(async (req: Request, res: Response) => {
   }
 
   await canAccessRoom(authUser._id.toString(), callLog.roomId.toString())
+  if (String(callLog.receiverId) !== String(authUser._id)) throw new AppError(403, 'Only the receiver can answer this call')
 
   if (!callLog.answeredAt && !TERMINAL_STATUSES.has(callLog.status)) {
     callLog.answeredAt = new Date()
@@ -77,6 +85,13 @@ export const endCallLog = catchAsync(async (req: Request, res: Response) => {
   }
 
   await canAccessRoom(authUser._id.toString(), callLog.roomId.toString())
+  if (![String(callLog.callerId), String(callLog.receiverId)].includes(String(authUser._id))) {
+    throw new AppError(403, 'Only call participants can end this call')
+  }
+  if (status !== undefined && !TERMINAL_STATUSES.has(status)) throw new AppError(400, 'Choose a valid final call status')
+  if (duration !== undefined && (typeof duration !== 'number' || !Number.isFinite(duration) || duration < 0)) {
+    throw new AppError(400, 'Call duration must be a non-negative number')
+  }
 
   if (TERMINAL_STATUSES.has(callLog.status) && callLog.endedAt) {
     res.status(httpStatus.OK).json({
