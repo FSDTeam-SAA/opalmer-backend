@@ -6,10 +6,8 @@ import AppError from '../errors/AppError';
 import { GuardianInvitation } from '../models/guardianInvitation.model';
 import { activeAccount, assertUser, sameId } from '../services/access.service';
 import sendEmail from '../utils/sendEmail';
+import { guardianInvitationEmail } from '../utils/guardianInvitationTemplate';
 
-const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, character => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-}[character]!));
 
 export const inviteGuardian = catchAsync(async (req, res) => {
   const requested = String(req.body.childId ?? '');
@@ -33,20 +31,8 @@ export const inviteGuardian = catchAsync(async (req, res) => {
   const expiresAt = new Date(Date.now() + 72 * 60 * 60_000);
   const invitation = await GuardianInvitation.create({ childId: child._id, codeHash: crypto.createHash('sha256').update(code).digest('hex'), parentEmail: email, createdBy: req.user!._id, expiresAt });
   try {
-    await sendEmail({
-      to: email,
-      subject: 'AchieverPlus guardian invitation',
-      html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#302639">
-        <h2 style="color:#871dad">You have been invited to connect with your child</h2>
-        <p>Your school has invited you to link <strong>${escapeHtml(child.username)}</strong> to your parent account in AchieverPlus.</p>
-        <p>Student ID: <strong>${escapeHtml(child.Id)}</strong></p>
-        <p>Invitation code:</p>
-        <p style="font-size:28px;font-weight:bold;letter-spacing:3px;color:#871dad">${code}</p>
-        <ol><li>Sign in to the parent app using this email address.</li><li>Open My Students and tap +.</li><li>Enter the Student ID and invitation code, then tap Link student.</li></ol>
-        <p>This code can be used once and expires in 72 hours (${expiresAt.toUTCString()}).</p>
-        <p>If you do not recognize this student, contact the school and do not use the code.</p>
-      </div>`,
-    });
+    const { html, text } = guardianInvitationEmail({ studentName: child.username, studentId: child.Id, code, expiresAt });
+    await sendEmail({ to: email, subject: 'AchieverPlus guardian invitation', html, text });
   } catch {
     await GuardianInvitation.deleteOne({ _id: invitation._id, usedAt: { $exists: false } });
     throw new AppError(503, 'Unable to send invitation email. Please try again.');
