@@ -350,9 +350,19 @@ const getClassRoster = async (classData: any) => {
   return assignedStudents;
 };
 
+// Cover image is a URL from /grading/question-image (Cloudinary) or an
+// AI-generated question image; anything else is dropped.
+const normalizeCoverImage = (value: unknown): string => {
+  const image = typeof value === "string" ? value.trim() : "";
+  if (!image || image.length > 2048) return "";
+  return /^https?:\/\//i.test(image) || image.startsWith("/quiz-images/")
+    ? image
+    : "";
+};
+
 const createSession = catchAsync(async (req, res) => {
   const teacherId = requireCurrentUserId(req);
-  const { classId, title, description, time } = req.body;
+  const { classId, title, description, time, image } = req.body;
 
   if (!title?.toString().trim()) {
     throw new AppError(httpStatus.BAD_REQUEST, "title is required");
@@ -365,6 +375,7 @@ const createSession = catchAsync(async (req, res) => {
     classId,
     title: title.toString().trim(),
     description: description?.toString() ?? "",
+    image: normalizeCoverImage(image),
     time: Number(time) || 5,
     status: "draft",
   });
@@ -431,6 +442,9 @@ const updateSession = catchAsync(async (req, res) => {
     updates.description = req.body.description.toString();
   }
   if (req.body.time !== undefined) updates.time = Number(req.body.time) || 5;
+  if (req.body.image !== undefined) {
+    updates.image = normalizeCoverImage(req.body.image);
+  }
 
   const updated = await Quiz.findByIdAndUpdate(session._id, updates, {
     new: true,
